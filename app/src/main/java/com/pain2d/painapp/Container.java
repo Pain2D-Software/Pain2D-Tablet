@@ -675,51 +675,26 @@
  * <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-apply plugin: 'com.android.application'
+package com.pain2d.painapp;
 
-android {
-    compileSdkVersion 32
-//    buildToolsVersion "29.0.3"
+import java.util.ArrayList;
 
-   // useLibrary 'org.apache.http.legacy'
-    defaultConfig {
-        applicationId "com.pain2d.painapp"
-        minSdkVersion 16
-        targetSdkVersion 32
-        versionCode 1
-        versionName "1.0"
+//Used to store cross-activity variables
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-    }
+public class Container {
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
+    public static ArrayList<String> colorList = new ArrayList<String>();
+    public static ArrayList<String> typeList= new ArrayList<String>();
+    public static String filePath;
+    public static boolean ifImport = false;
+    public static int typeColor;
+    public static String typeName;
+    public static float proportion;
+    public static boolean move_action = true;
+    public static boolean ifDisplay = false;
+    public static boolean ifRedraw = false;
 
-}
+    public static boolean isFromFilesList = false;
 
-
-
-dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-
-
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-    implementation 'com.google.android.material:material:1.1.0'
-   // implementation 'org.apache.directory.studio:org.apache.commons.io:2.4'
-
-
-
-
+    static final int SELECTOR_RADIUS_DP = 9;
 }

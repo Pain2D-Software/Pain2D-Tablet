@@ -675,51 +675,54 @@
  * <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-apply plugin: 'com.android.application'
+package com.pain2d.painapp;
 
-android {
-    compileSdkVersion 32
-//    buildToolsVersion "29.0.3"
+import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.RadialGradient;
+import android.graphics.Shader;
+import android.graphics.SweepGradient;
+import android.view.View;
 
-   // useLibrary 'org.apache.http.legacy'
-    defaultConfig {
-        applicationId "com.pain2d.painapp"
-        minSdkVersion 16
-        targetSdkVersion 32
-        versionCode 1
-        versionName "1.0"
+public class ColorWheelPalette extends View {
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    private float radius;
+    private float centerX;
+    private float centerY;
+
+    private Paint huePaint;
+    private Paint saturationPaint;
+
+
+    public ColorWheelPalette(Context context) {
+        super(context);
+        huePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        saturationPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     }
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        int netWidth = w - getPaddingLeft() - getPaddingRight();
+        int netHeight = h - getPaddingTop() - getPaddingBottom();
+        radius = Math.min(netWidth, netHeight) * 0.5f;
+        if (radius < 0) return;
+        centerX = w * 0.5f;
+        centerY = h * 0.5f;
+
+        Shader hueShader = new SweepGradient(centerX, centerY, new int[]{Color.RED, Color.MAGENTA, Color.BLUE, Color.CYAN, Color.GREEN, Color.YELLOW, Color.RED},
+                null);
+        huePaint.setShader(hueShader);
+
+        Shader saturationShader = new RadialGradient(centerX, centerY, radius, Color.WHITE, 0x00FFFFFF, Shader.TileMode.CLAMP);
+        saturationPaint.setShader(saturationShader);
     }
 
+    @Override
+    protected void onDraw(Canvas canvas) {
+        canvas.drawCircle(centerX, centerY, radius, huePaint);
+        canvas.drawCircle(centerX, centerY, radius, saturationPaint);
+    }
 }
 
-
-
-dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-
-
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-    implementation 'com.google.android.material:material:1.1.0'
-   // implementation 'org.apache.directory.studio:org.apache.commons.io:2.4'
-
-
-
-
-}

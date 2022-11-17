@@ -675,51 +675,61 @@
  * <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-apply plugin: 'com.android.application'
+package com.pain2d.painapp;
 
-android {
-    compileSdkVersion 32
-//    buildToolsVersion "29.0.3"
+import android.content.Context;
+import android.os.Build;
 
-   // useLibrary 'org.apache.http.legacy'
-    defaultConfig {
-        applicationId "com.pain2d.painapp"
-        minSdkVersion 16
-        targetSdkVersion 32
-        versionCode 1
-        versionName "1.0"
+import androidx.annotation.RequiresApi;
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-    }
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+//Read and write files
+public class RWList {
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    protected ArrayList<String> readList(Context context,String fileName) {
+        ArrayList<String> itemList = new ArrayList<String>();
+        String filePath = context.getFilesDir().getAbsolutePath()+File.separator+fileName;
+        try (FileReader reader = new FileReader(filePath);
+             BufferedReader br = new BufferedReader(reader)
+        ) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                itemList.add(line.toUpperCase());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-    }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        return itemList;
     }
 
-}
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    protected void writeList(Context context, String typename,String fileName){
+        try {
+            ArrayList<String> arrayList = readList(context,fileName);
+            arrayList.add(typename);
+            String filePath = context.getFilesDir().getAbsolutePath()+File.separator+fileName;
+            File writeName = new File(filePath);
+            writeName.createNewFile();
+            try (FileWriter writer = new FileWriter(writeName);
+                 BufferedWriter out = new BufferedWriter(writer)
+            ) {
+                for (String string:arrayList){
+                    out.write(string.toUpperCase()+"\r\n");
+                }
+                out.flush();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
 
 
-dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-
-
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-    implementation 'com.google.android.material:material:1.1.0'
-   // implementation 'org.apache.directory.studio:org.apache.commons.io:2.4'
-
-
-
-
+    }
 }

@@ -675,51 +675,218 @@
  * <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-apply plugin: 'com.android.application'
+package com.pain2d.painapp;
 
-android {
-    compileSdkVersion 32
-//    buildToolsVersion "29.0.3"
+import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.os.Build;
+import android.os.Bundle;
+import android.util.DisplayMetrics;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.ImageView;
+import android.widget.Toast;
 
-   // useLibrary 'org.apache.http.legacy'
-    defaultConfig {
-        applicationId "com.pain2d.painapp"
-        minSdkVersion 16
-        targetSdkVersion 32
-        versionCode 1
-        versionName "1.0"
+import androidx.annotation.RequiresApi;
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+
+public class MainActivity extends Activity {
+    public static final int FILE_RESULT_CODE = 1;
+    public static final int RESULT_OK = 1;
+    Context context = this;
+
+    public boolean isReady(){
+        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+        return sharedPref.getBoolean("ready", false);
     }
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    public void setReady(){
+        SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putBoolean("ready", true);
+        editor.commit();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    public void setup(){
+        if (isReady()) return;
+        init();
+        setReady();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    public void addPain(RWList rwList, String name, String color){
+        rwList.writeList(this,name,"typeList.txt");
+        rwList.writeList(context,color,"colorList.txt");
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    public void init(){
+        RWList rwList = new RWList();
+        //add new pain called none ( black )
+        addPain(rwList,"anfallsartiger","#FFFF0000");
+        addPain(rwList,"einschießender","#FF00FF00");
+        addPain(rwList,"brennend","#FFFF00FF");
+        addPain(rwList,"dumpf","#FFD2E6A4");
+        addPain(rwList,"bohrend","#FFE3686D");
+        addPain(rwList,"pochend","#FF9B083E");
+        addPain(rwList,"stechend","#AA436944");
+        addPain(rwList,"ziehend","#FFE11330");
+        addPain(rwList,"heiß","#FF6C87D7");
+        addPain(rwList,"akut","#AAFFAC30");
+        addPain(rwList,"Ameisenlaufen","#FFFF4929");
+        addPain(rwList,"Stromkribbeln","#FFA1C3B5");
+        addPain(rwList,"Taubheistgefühl","#FFC0D843");
+        addPain(rwList,"kolik","#FF33224A");
+        addPain(rwList,"krampfartig","#FF126155");
+        addPain(rwList," blitzartig-elektrisierend","#FF269383");
+
+
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        setup();
+        RWList rwList = new RWList();
+        Container.colorList= rwList.readList(context,"colorList.txt");
+        Container.typeList = rwList.readList(context,"typeList.txt");
+
+
+        DisplayMetrics dm = getResources().getDisplayMetrics();
+        int screenWidth = dm.widthPixels;
+        int screenHeight = dm.heightPixels;
+        Container.proportion = (float) (screenWidth*0.8)/(float) (827);
+
+        ImageView infoview = (ImageView) findViewById(R.id.button_info);
+        infoview.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Toast.makeText(getApplicationContext(),
+                        "# Pain2D-Tablet is part of Pain2D-Software package\n" +
+                        "#\n" +
+                        "# Filename is part of Pain2D-Designer: you can redistribute it and/or modify\n" +
+                        "# it under the terms of the GNU General Public License as published by\n" +
+                        "# the Free Software Foundation, either version 3 of the License, or\n" +
+                        "# (at your option) any later version.\n" +
+                        "#\n" +
+                        "# Filename is distributed in the hope that it will be useful,\n" +
+                        "# but WITHOUT ANY WARRANTY; without even the implied warranty of\n" +
+                        "# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n" +
+                        "# GNU General Public License for more details.\n" +
+                        "#\n" +
+                        "# You should have received a copy of the GNU General Public License\n" +
+                        "# along with Filename  If not, see <http://www.gnu.org/licenses/>.\n" +
+                        "#\n" +
+                        "###################################################################\n" +
+                        "#\n" +
+                        "#@author Wenfeng Zhu\n" +
+                        "\n" +
+                        "# @author Nefissa Khedher\n" +
+                        "###################################################################",Toast.LENGTH_LONG).show();
+            }
+        });
+
+        ImageView imageView = (ImageView)findViewById(R.id.app_icon);
+        ViewGroup.LayoutParams params = imageView.getLayoutParams();
+        params.width = screenWidth*2/3;
+        params.height = screenWidth*2/3;
+
+        //Button pointing to Draw Page
+        Button bt1 = (Button) findViewById(R.id.goToDraw);
+        bt1.setOnClickListener(new Button.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, PainTypeActivity.class);
+                startActivity(intent);
+            }
+        });
+
+
+
+        //Button pointing to File Page
+       /* Button bt2 = (Button) findViewById(R.id.goToSelect);
+        bt2.setOnClickListener(new Button.OnClickListener() {
+            @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+            @Override
+            public void onClick(View v) {
+
+//The comment part is to read and write the color file and the name file again
+
+//                try {
+//                    String filePath = context.getFilesDir().getAbsolutePath()+File.separator+"typeList.txt";
+//                    File typeList = new File(filePath);
+//                    typeList.createNewFile();
+//                    try (FileWriter writer = new FileWriter(typeList); BufferedWriter out = new BufferedWriter(writer)){
+//                        String[] list = context.getResources().getStringArray(R.array.typeList);
+//                        for (String string:list){
+//                            out.write(string.toUpperCase()+"\r\n");
+//                        }
+//                        out.flush();
+//                    }
+//                } catch (IOException e) {
+//                    e.printStackTrace();
+//                }
+
+                Intent intent = new Intent(MainActivity.this, FileSelectActivity.class);
+                //When the new interface is closed, the data is returned.
+                startActivityForResult(intent, FILE_RESULT_CODE);
+            }
+        });*/
+
+        Button bt3 = (Button)findViewById(R.id.button_display);
+        bt3.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, FileSelectActivity.class);
+                startActivity(intent);
+                Container.ifDisplay = true;
+                Container.ifRedraw = false;
+
+            }
+        });
+
+        Button bt4 = (Button)findViewById(R.id.button_redraw);
+        bt4.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, FileSelectActivity.class);
+                startActivity(intent);
+                Container.ifRedraw = true;
+                Container.ifDisplay = false;
+            }
+        });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        //Get data from the new interface
+        String filePath = data.getStringExtra("filePath");
+        Container.filePath = filePath;
+        if (RESULT_OK == resultCode) {
+            //Bundle bundle = null;
+            if (data != null && (data.getExtras()) != null) {
+             //   TextView textView = (TextView) findViewById(R.id.filePath);
+                //Show file path in Text View
+              //  textView.setText("The folder you choose is：" + "\n" + filePath);
+                //Determine the corresponding color according to the second half of the path string
+                String str = filePath;
+
+                Container.typeName = str.substring(filePath.lastIndexOf("_")+1,filePath.length()-5);
+                Container.typeColor = Color.parseColor(Container.colorList.get(Container.typeList.indexOf(Container.typeName)));
+
+                Container.ifImport = true;
+            }
         }
     }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
-
-}
-
-
-
-dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-
-
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-    implementation 'com.google.android.material:material:1.1.0'
-   // implementation 'org.apache.directory.studio:org.apache.commons.io:2.4'
-
-
 
 
 }

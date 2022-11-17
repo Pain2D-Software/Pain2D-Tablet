@@ -675,51 +675,434 @@
  * <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-apply plugin: 'com.android.application'
+package com.pain2d.painapp;
 
-android {
-    compileSdkVersion 32
-//    buildToolsVersion "29.0.3"
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.content.Intent;
+import android.database.Cursor;
+import android.graphics.Color;
+import android.net.Uri;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Handler;
+import android.provider.OpenableColumns;
+import android.util.Log;
+import android.view.Gravity;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
+import android.webkit.MimeTypeMap;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.Spinner;
+import android.widget.TextView;
+import android.widget.Toast;
 
-   // useLibrary 'org.apache.http.legacy'
-    defaultConfig {
-        applicationId "com.pain2d.painapp"
-        minSdkVersion 16
-        targetSdkVersion 32
-        versionCode 1
-        versionName "1.0"
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
+import androidx.appcompat.app.AppCompatActivity;
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+public class PainTypeActivity extends AppCompatActivity {
+
+    private static final int PICKFILE_REQUEST_CODE = 101;
+    Context context = this;
+
+    private Spinner spinner_1 = null;
+    private Spinner spinner_2 = null;
+    private ArrayAdapter<String> arrayAdapter = null;
+
+    private String[] painType = null;
+    private ArrayList<String> typeList = new ArrayList<String>();
+    //private int num = 2;
+    private Handler handler = new Handler();
+
+
+    private ArrayList<String> typeListFinal = new ArrayList<String>();
+    private ArrayList<Spinner> spinners = new ArrayList<Spinner>();
+    private ArrayList<String> colrList = new ArrayList<String>();
+
+    private Map<String, Integer> map = new HashMap<String, Integer>();
+
+    @Override
+    protected void onPostResume() {
+        super.onPostResume();
+        Log.e("BETA","Hi, I'm resumed");
     }
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    @SuppressLint("ClickableViewAccessibility")
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    protected void onCreate(Bundle saveInstanceState) {
+
+        super.onCreate(saveInstanceState);
+        setContentView(R.layout.activity_paintype);
+
+        Animation animation = AnimationUtils.loadAnimation(context,R.anim.alpha);
+
+
+        colrList = Container.colorList;
+        typeList = Container.typeList;
+
+        for (int i = 0; i < typeList.size(); i++) {
+            String color = colrList.get(i);
+            map.put(typeList.get(i), Color.parseColor(color));
+        }
+
+      //  typeList.add("Paintype1");
+     //   typeList.add("Paintype2");
+
+
+
+
+
+        arrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, typeList);
+        arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        final Button bt1 = (Button) findViewById(R.id.button_1);
+        spinner_1 = (Spinner) findViewById(R.id.spinner_1);
+        spinner_1.setAdapter(arrayAdapter);
+        spinner_1.setVisibility(View.VISIBLE);
+        spinner_1.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+
+                String string_1 = ((TextView) view).getText().toString();
+
+
+                setButtonColor(bt1, string_1);
+
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+        spinners.add(spinner_1);
+
+
+     /*   *//*ImageButton addButton = (ImageButton) findViewById(R.id.button_add);
+        addButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                //choose new template
+            }
+        });*//*
+        addButton.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+               *//* switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        addItem();
+                }*//*
+                return false;
+            }
+        });*/
+        Button addPainType = (Button) findViewById(R.id.button_2);
+        addPainType.setOnTouchListener(new View.OnTouchListener() {
+            @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN:
+                        addItem();
+                }
+                return false;
+            }
+        });
+
+
+
+        final RWList RWList = new RWList();
+        final DialogUtils dialogUtils = new DialogUtils();
+        ImageButton button_newType = (ImageButton)findViewById(R.id.button_newType);
+        button_newType.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                button_newType.startAnimation(animation);
+                dialogUtils.addPasswordDialog(context);
+            }
+        });
+
+
+        ImageButton button_back = (ImageButton) findViewById(R.id.button_back);
+        button_back.setOnClickListener(new Button.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+             button_back.startAnimation(animation);
+                Intent intent = new Intent(PainTypeActivity.this, MainActivity.class);
+                startActivity(intent);
+            }
+        });
+
+
+        ImageButton button_next = (ImageButton) findViewById(R.id.button_next);
+        button_next.setOnClickListener(new Button.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                button_next.startAnimation(animation);
+                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                intent.setType(MimeTypeMap.getSingleton().getMimeTypeFromExtension("json"));
+                startActivityForResult(intent, PICKFILE_REQUEST_CODE);
+
+            }
+        });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if(requestCode==PICKFILE_REQUEST_CODE){
+            importFile(data.getData());
+            Log.e("BETA","I'm back here");
         }
     }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+
+
+    public static File getTempFile(Context context, String fileName) {
+
+        File path = new File(context.getFilesDir(), "jsonfiles/temps");
+        if (!path.exists()) path.mkdirs();
+        String newFileName = fileName != null ? fileName : "name";
+
+        return new File(path, newFileName + ".json");
     }
 
-}
+    public void importFile(Uri uri) {
+        String fileName = getFileName(uri);
+
+        Log.i("FileName",fileName);
+        // The temp file could be whatever you want
+        File tempFile = getTempFile(getApplicationContext(), null);
+
+        try {
+            File fileCopy = copyToTempFile(uri,tempFile);
+            Log.i("FileCopy",fileCopy.toString());
 
 
+                Set set = new HashSet();
+                for (Spinner spinner : spinners) {
+                    typeListFinal.add(spinner.getSelectedItem().toString());
+                    set.add(spinner.getSelectedItem().toString());
+                }
+                if (typeListFinal.size() != set.size()) {
+                    Toast toast = Toast.makeText(context, "The selected type has duplicates!", Toast.LENGTH_SHORT);
+                    toast.setGravity(Gravity.CENTER, 0, 0);
+                    toast.show();
+                    typeListFinal.clear();
+                    set.clear();
+                } else {
+                    Intent intent = new Intent(PainTypeActivity.this, DrawActivity.class);
+                    Map<String, Integer> mapFinal = new HashMap<String, Integer>();
+                    for (String string : typeListFinal) {
+                        mapFinal.put(string, map.get(string));
+                    }
 
-dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
+
+                    intent.putExtra("map", (Serializable) mapFinal);
+
+                    //intent.putStringArrayListExtra("typeList",typeListFinal);
+                    startActivity(intent);
+                }
 
 
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-    implementation 'com.google.android.material:material:1.1.0'
-   // implementation 'org.apache.directory.studio:org.apache.commons.io:2.4'
+        } catch (IOException e) {
+            e.printStackTrace();
+
+        }
+
+        // Done!
+    }
+    private String getFileName(Uri uri) throws IllegalArgumentException {
+        // Obtain a cursor with information regarding this uri
+        Cursor cursor = getContentResolver().query(uri, null, null, null, null);
+
+        if (cursor.getCount() <= 0) {
+            cursor.close();
+            throw new IllegalArgumentException("Can't obtain file name, cursor is empty");
+        }
+
+        cursor.moveToFirst();
+
+        String fileName = cursor.getString(cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME));
+
+        cursor.close();
+
+        return fileName;
+    }
+
+    private File copyToTempFile(Uri uri, File tempFile) throws IOException {
+        // Obtain an input stream from the uri
+        InputStream inputStream = getContentResolver().openInputStream(uri);
+
+        if (inputStream == null) {
+            throw new IOException("Unable to obtain input stream from URI");
+        }
+
+        // Copy the stream to the temp file
+       copyInputStreamToFile(inputStream, tempFile);
 
 
+        return tempFile;
+    }
 
 
+    public static void copyInputStreamToFile(InputStream source, File destination) throws IOException {
+        try {
+            FileOutputStream output = openOutputStream(destination, false);
+            try {
+                copy(source, output);
+                output.close(); // don't swallow close Exception if copy completes normally
+            } finally {
+               // IOUtils.closeQuietly(output);
+            }
+        } finally {
+           // IOUtils.closeQuietly(source);
+        }
+    }
+
+    public static FileOutputStream openOutputStream(File file, boolean append) throws IOException {
+        if (file.exists()) {
+            if (file.isDirectory()) {
+                throw new IOException("File '" + file + "' exists but is a directory");
+            }
+            if (file.canWrite() == false) {
+                throw new IOException("File '" + file + "' cannot be written to");
+            }
+        } else {
+            File parent = file.getParentFile();
+            if (parent != null) {
+                if (!parent.mkdirs() && !parent.isDirectory()) {
+                    throw new IOException("Directory '" + parent + "' could not be created");
+                }
+            }
+        }
+        return new FileOutputStream(file, append);
+    }
+
+    public static int copy(InputStream input, OutputStream output) throws IOException {
+        long count = copyLarge(input, output);
+        if (count > Integer.MAX_VALUE) {
+            return -1;
+        }
+        return (int) count;
+    }
+
+    public static long copyLarge(InputStream input, OutputStream output)
+            throws IOException {
+        return copyLarge(input, output, new byte[1024 * 4]);
+    }
+
+    public static long copyLarge(InputStream input, OutputStream output, byte[] buffer)
+            throws IOException {
+        long count = 0;
+        int n = 0;
+        while (-1 != (n = input.read(buffer))) {
+            output.write(buffer, 0, n);
+            count += n;
+        }
+        return count;
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    protected void addItem() {
+        final LinearLayout linearLayout = new LinearLayout(context);
+        Spinner spinner = new Spinner(context);
+        spinner.setPopupBackgroundResource(R.color.white);
+        spinner.setBackgroundColor(getResources().getColor(R.color.white));
+        final Button button = new Button(context);
+        final Button button_delete = new Button(context);
+        button_delete.setText("DELETE");
+        button_delete.setTextColor(getResources().getColor(R.color.white));
+        button_delete.setBackground(getDrawable(R.drawable.mybutton));
+        linearLayout.setOrientation(LinearLayout.HORIZONTAL);
+        linearLayout.setWeightSum(6);
+        LinearLayout.LayoutParams params_0 = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        linearLayout.setLayoutParams(params_0);
+        LinearLayout.LayoutParams params_1 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 4.0f);
+        spinner.setLayoutParams(params_1);
+        params_1.setMargins(2, 2, 2, 2);
+
+        LinearLayout.LayoutParams params_2 = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1.0f);
+        params_2.setMargins(2, 2, 2, 2);
+        button.setLayoutParams(params_2);
+        button_delete.setLayoutParams(params_2);
+        LinearLayout layout = (LinearLayout) findViewById(R.id.AllListLayout);
+        layout.addView(linearLayout);
+        linearLayout.addView(spinner);
+        linearLayout.addView(button);
+        linearLayout.addView(button_delete);
+        button_delete.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                LinearLayout layoutAll = (LinearLayout) findViewById(R.id.AllListLayout);
+                layoutAll.removeView(linearLayout);
+                spinners.remove(spinner);
+            }
+        });
+        dropBoxButton(spinner, button);
+        spinners.add(spinner);
+    }
+
+    protected void dropBoxButton(Spinner spinner, final Button button) {
+        arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(arrayAdapter);
+
+        spinner.setVisibility(View.VISIBLE);
+        spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String string_1 = ((TextView) view).getText().toString();
+                setButtonColor(button, string_1);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+            }
+        });
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    protected void setButtonColor(Button button, String string) {
+        int num = map.get(string);
+        button.setBackgroundColor(num);
+
+    }
+
+
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    public void invalidateData() {
+        colrList.clear();
+        typeList.clear();
+
+        RWList rwList = new RWList();
+        Container.colorList= rwList.readList(context,"colorList.txt");
+        Container.typeList = rwList.readList(context,"typeList.txt");
+
+        colrList = Container.colorList;
+        typeList = Container.typeList;
+
+        for (int i = 0; i < typeList.size(); i++) {
+            String color = colrList.get(i);
+            map.put(typeList.get(i), Color.parseColor(color));
+        }
+
+        arrayAdapter.notifyDataSetChanged();
+    }
 }

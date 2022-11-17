@@ -675,51 +675,156 @@
  * <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-apply plugin: 'com.android.application'
+package com.pain2d.painapp;
 
-android {
-    compileSdkVersion 32
-//    buildToolsVersion "29.0.3"
+import android.content.Context;
+import android.graphics.Color;
+import android.graphics.PointF;
+import android.view.MotionEvent;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 
-   // useLibrary 'org.apache.http.legacy'
-    defaultConfig {
-        applicationId "com.pain2d.painapp"
-        minSdkVersion 16
-        targetSdkVersion 32
-        versionCode 1
-        versionName "1.0"
+import androidx.annotation.NonNull;
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-    }
+public class ColorWheel extends FrameLayout implements ColorMonitor, ColorUpdate {
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    private float radius;
+    private float centerX;
+    private float centerY;
+    private final int SELECTOR_RADIUS_DP = Container.SELECTOR_RADIUS_DP;
+
+    private float selectorRadiusPx = SELECTOR_RADIUS_DP * 3;
+
+    private PointF currentPoint = new PointF();
+
+
+    private int currentColor = Color.WHITE;
+    private boolean onlyUpdateOnTouchEventUp;
+
+    private ColorEmitter emitter = new ColorEmitter();
+    private ColorWheelSelector selector;
+    private MotionEvent event;
+
+
+    public ColorWheel(@NonNull Context context) {
+        super(context);
+        selectorRadiusPx = SELECTOR_RADIUS_DP * getResources().getDisplayMetrics().density;
+        {
+            FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            ColorWheelPalette palette = new ColorWheelPalette(context);
+            int padding = (int) selectorRadiusPx;
+            palette.setPadding(padding, padding, padding, padding);
+            addView(palette, layoutParams);
+        }
+        {
+            FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            selector = new ColorWheelSelector(context);
+            selector.setSelectorRadiusPx(selectorRadiusPx);
+            addView(selector, layoutParams);
         }
     }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        int maxWidth = MeasureSpec.getSize(widthMeasureSpec);
+        int maxHeight = MeasureSpec.getSize(heightMeasureSpec);
+
+        int width, height;
+        width = height = Math.min(maxWidth, maxHeight);
+        super.onMeasure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
     }
 
-}
+    public float getCenterX() {
+        return centerX;
+    }
 
+    public float getCenterY() {
+        return centerY;
+    }
 
+    public float getRadius() {
+        return radius;
+    }
 
-dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        int netWidth = w - getPaddingLeft() - getPaddingRight();
+        int netHeight = h - getPaddingTop() - getPaddingBottom();
+        //保证selector的圆心永远在colorSpace内
+        radius = Math.min(netWidth, netHeight) * 0.5f - selectorRadiusPx;
+        if (radius < 0) return;
+        centerX = netWidth * 0.5f;
+        centerY = netHeight * 0.5f;
+        setColor(currentColor);
+    }
 
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        int action = event.getActionMasked();
+        switch (action) {
+            case MotionEvent.ACTION_DOWN:
+            case MotionEvent.ACTION_MOVE:
+                update(event);
+                return true;
+            case MotionEvent.ACTION_UP:
+        }
+        return super.onTouchEvent(event);
+    }
 
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-    implementation 'com.google.android.material:material:1.1.0'
-   // implementation 'org.apache.directory.studio:org.apache.commons.io:2.4'
+    @Override
+    public int getColor() {
+        return emitter.getColor();
+    }
 
+    public void setColor(int color) {
+        float[] hsv = new float[3];
+        Color.colorToHSV(color, hsv);
+        float r = hsv[1] * radius;
+        float radian = (float) (hsv[0] / 180f * Math.PI);
+        updateSelector((float) (r * Math.cos(radian) + centerX), (float) (-r * Math.sin(radian) + centerY));
+        currentColor = color;
+        if (!onlyUpdateOnTouchEventUp) {
+            emitter.onColor(color);
+        }
+    }
 
+    @Override
+    public void update(MotionEvent event) {
+        float x = event.getX();
+        float y = event.getY();
+        boolean isTouchUpEvent = event.getActionMasked() == MotionEvent.ACTION_UP;
+        if (!onlyUpdateOnTouchEventUp || isTouchUpEvent) {
+            emitter.onColor(getColorAtPoint(x, y));
+        }
+        updateSelector(x, y);
 
+    }
 
+    public void setOnlyUpdateOnTouchEventUp(boolean onlyUpdateOnTouchEventUp) {
+        this.onlyUpdateOnTouchEventUp = onlyUpdateOnTouchEventUp;
+    }
+
+    private int getColorAtPoint(float eventX, float eventY) {
+        float x = eventX - centerX;
+        float y = eventY - centerY;
+        double r = Math.sqrt(x * x + y * y);
+        float[] hsv = {0, 0, 1};
+        hsv[0] = (float) (Math.atan2(y, -x) / Math.PI * 180f) + 180;
+        hsv[1] = Math.max(0f, Math.min(1f, (float) (r / radius)));
+        return Color.HSVToColor(hsv);
+    }
+
+    private void updateSelector(float eventX, float eventY) {
+        float x = eventX - centerX;
+        float y = eventY - centerY;
+        double r = Math.sqrt(x * x + y * y);
+        if (r > radius) {
+            x *= radius / r;
+            y *= radius / r;
+        }
+        currentPoint.x = x + centerX;
+        currentPoint.y = y + centerY;
+        selector.setCurrentPoint(currentPoint);
+    }
 }

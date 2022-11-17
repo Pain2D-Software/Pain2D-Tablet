@@ -675,51 +675,109 @@
  * <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-apply plugin: 'com.android.application'
+package com.pain2d.painapp;
 
-android {
-    compileSdkVersion 32
-//    buildToolsVersion "29.0.3"
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.os.Bundle;
+import android.view.MotionEvent;
+import android.view.ScaleGestureDetector;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 
-   // useLibrary 'org.apache.http.legacy'
-    defaultConfig {
-        applicationId "com.pain2d.painapp"
-        minSdkVersion 16
-        targetSdkVersion 32
-        versionCode 1
-        versionName "1.0"
+import androidx.appcompat.app.AppCompatActivity;
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+public class TestActivity extends AppCompatActivity {
+    private SurfaceView mSurfaceView = null;
+    private SurfaceHolder mSurfaceHolder = null;
+    private ScaleGestureDetector mScaleGestureDetector = null;
+    private Bitmap mBitmap;
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_test);
+
+        mSurfaceView = (SurfaceView) this.findViewById(R.id.surfaceview);
+        mSurfaceHolder = mSurfaceView.getHolder();
+        mScaleGestureDetector = new ScaleGestureDetector(this,
+                new ScaleGestureListener());
+
+        mSurfaceView.post(new Runnable() {
+
+            @Override
+            public void run() {
+
+                mBitmap = Bitmap.createBitmap(100,100, Bitmap.Config.ARGB_8888);
+
+                Canvas mCanvas = mSurfaceHolder.lockCanvas();
+
+                Paint hBitmapPaint = new Paint(Paint.DITHER_FLAG);
+                hBitmapPaint.setColor(Color.BLACK);
+                mCanvas.drawBitmap(mBitmap, 0f, 0f, null);
+                mCanvas.drawCircle(100,100,100,hBitmapPaint);
+
+                mSurfaceHolder.unlockCanvasAndPost(mCanvas);
+
+                mSurfaceHolder.lockCanvas(new Rect(0, 0, 0, 0));
+                mSurfaceHolder.unlockCanvasAndPost(mCanvas);
+            }
+        });
+
     }
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        // 返回给ScaleGestureDetector来处理
+        return mScaleGestureDetector.onTouchEvent(event);
+    }
+
+    public class ScaleGestureListener implements ScaleGestureDetector.OnScaleGestureListener {
+
+        private float scale;
+        private float preScale = 1;
+
+        @Override
+        public boolean onScale(ScaleGestureDetector detector) {
+            // TODO Auto-generated method stub
+
+            Matrix mMatrix = new Matrix();
+            float previousSpan = detector.getPreviousSpan();
+            float currentSpan = detector.getCurrentSpan();
+            if (currentSpan < previousSpan) {
+                scale = preScale - (previousSpan - currentSpan) / 1000;
+            } else {
+                scale = preScale + (currentSpan - previousSpan) / 1000;
+            }
+            mMatrix.setScale(scale, scale);
+
+
+            Canvas mCanvas = mSurfaceHolder.lockCanvas();
+
+            mCanvas.drawColor(Color.WHITE);
+
+            mCanvas.drawBitmap(mBitmap, mMatrix, null);
+
+            mSurfaceHolder.unlockCanvasAndPost(mCanvas);
+
+            mSurfaceHolder.lockCanvas(new Rect(0, 0, 0, 0));
+            mSurfaceHolder.unlockCanvasAndPost(mCanvas);
+
+            return false;
+        }
+
+        @Override
+        public boolean onScaleBegin(ScaleGestureDetector detector) {
+            return true;
+        }
+
+        @Override
+        public void onScaleEnd(ScaleGestureDetector detector) {
+            preScale = scale;
         }
     }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
-    }
-
-}
-
-
-
-dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-
-
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-    implementation 'com.google.android.material:material:1.1.0'
-   // implementation 'org.apache.directory.studio:org.apache.commons.io:2.4'
-
-
-
-
 }

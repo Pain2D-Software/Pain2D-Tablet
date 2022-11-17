@@ -675,51 +675,48 @@
  * <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-apply plugin: 'com.android.application'
+package com.pain2d.painapp;
 
-android {
-    compileSdkVersion 32
-//    buildToolsVersion "29.0.3"
+import android.view.ScaleGestureDetector;
+import android.view.ViewGroup;
 
-   // useLibrary 'org.apache.http.legacy'
-    defaultConfig {
-        applicationId "com.pain2d.painapp"
-        minSdkVersion 16
-        targetSdkVersion 32
-        versionCode 1
-        versionName "1.0"
+public class ScaleGestureListener implements ScaleGestureDetector.OnScaleGestureListener {
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    private DrawView targetView;
+    private float scaleTemp = 1;
+
+    public void setScale(float scale) {
+        this.scale = scale;
     }
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
-    }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+    private float scale;
+    private static float maxScale =  3.0f;
+
+    ScaleGestureListener(DrawView targetView, ViewGroup viewGroup) {
+        this.targetView = targetView;
     }
 
+    @Override
+    public boolean onScale(ScaleGestureDetector detector) {
+        scale = detector.getScaleFactor();
+        scale = scaleTemp * scale;
+        targetView.setScaleX(scale);
+        targetView.setScaleY(scale);
+        return false;
+    }
+
+    @Override
+    public boolean onScaleBegin(ScaleGestureDetector detector) {
+        return true;
+    }
+
+    @Override
+    public void onScaleEnd(ScaleGestureDetector detector) {
+        scaleTemp = scale;
+    }
+
+    public ScaleGestureListener getScale() {
+        return this;
+    }
 }
 
-
-
-dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-
-
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-    implementation 'com.google.android.material:material:1.1.0'
-   // implementation 'org.apache.directory.studio:org.apache.commons.io:2.4'
-
-
-
-
-}

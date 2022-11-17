@@ -675,51 +675,151 @@
  * <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-apply plugin: 'com.android.application'
+package com.pain2d.painapp;
 
-android {
-    compileSdkVersion 32
-//    buildToolsVersion "29.0.3"
+import android.annotation.SuppressLint;
+import android.app.Dialog;
+import android.content.Context;
 
-   // useLibrary 'org.apache.http.legacy'
-    defaultConfig {
-        applicationId "com.pain2d.painapp"
-        minSdkVersion 16
-        targetSdkVersion 32
-        versionCode 1
-        versionName "1.0"
+import android.graphics.Color;
+import android.view.MotionEvent;
+import android.view.View;
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+import android.view.ViewGroup;
+import android.widget.Button;
+
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+
+import androidx.annotation.NonNull;
+
+import java.util.Locale;
+
+
+public class ColorPickerActivity extends Dialog {
+
+
+    private static final String SAVED_STATE_KEY_COLOR = "saved_state_key_color";
+    private static final int INITIAL_COLOR = 0xFFFF8000;
+
+    public int getColor() {
+        return color;
     }
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
+    public void setColor(int color) {
+        this.color = color;
     }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+
+    private int color;
+    private float centerX;
+    private float centerY;
+    private float radius;
+
+    private int sliderMargin;
+    private int sliderHeight;
+
+    public Button getClose() {
+        return close;
+    }
+
+    public void setClose(Button close) {
+        this.close = close;
+    }
+
+    private Button close;
+
+    public ColorPickerActivity(@NonNull Context context) {
+        super(context);
+
+        setContentView(R.layout.activity_colorpick);
+
+        LinearLayout colorPickerView = (LinearLayout) findViewById(R.id.colorPicker);
+        LinearLayout colorslider = (LinearLayout)findViewById(R.id.Slider);
+        View pickedColor = (View)findViewById(R.id.pickedColor);
+        close = (Button)findViewById(R.id.confirmColor);
+        TextView colorHex = (TextView)findViewById(R.id.colorHex);
+        ColorWheel colorWheel = new ColorWheel(context);
+        BrightnessSliderView brightnessSliderView = new BrightnessSliderView(context);
+
+
+        float density = context.getResources().getDisplayMetrics().density;
+        int margin = (int) (8 * density);
+        sliderMargin = 2 * margin;
+        sliderHeight = (int) (50 * density);
+
+
+
+
+
+        centerX = colorWheel.getCenterX();
+        centerY = colorWheel.getCenterY();
+        radius = colorWheel.getRadius();
+        colorPickerView.setMinimumHeight(Math.round(2*radius));
+
+        ColorWheelSelector selector = new ColorWheelSelector(context);
+        colorPickerView.addView(colorWheel);
+        colorPickerView.addView(selector);
+
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, sliderHeight);
+        params.topMargin = sliderMargin;
+        colorslider.addView(brightnessSliderView, 0, params);
+
+
+
+        colorWheel.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getActionMasked()){
+                    case MotionEvent.ACTION_MOVE:
+                        setViewColor(pickedColor,colorWheel.getColor());
+                        brightnessSliderView.setBaseColor(colorWheel.getColor());
+                        setColorHex(colorHex,colorWheel.getColor());
+                        color = colorWheel.getColor();
+                        System.out.println("MOVE_TOUCH事件监听————————————————");
+                }
+                return false;
+            }
+        });
+
+        brightnessSliderView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getActionMasked()){
+                    case MotionEvent.ACTION_MOVE:
+                        setViewColor(pickedColor,brightnessSliderView.getColor());
+                        setColorHex(colorHex,brightnessSliderView.getColor());
+                        color = colorWheel.getColor();
+                        System.out.println("MOVE_TOUCH事件监听————————————————");
+                }
+                return false;
+            }
+        });
+    }
+
+    @SuppressLint("ClickableViewAccessibility")
+
+//    @Override
+//    protected void onSaveInstanceState(Bundle outState) {
+//        super.onSaveInstanceState(outState);
+//        outState.putInt(SAVED_STATE_KEY_COLOR,color);
+//    }
+
+    private String colorHex(int color){
+        int a = Color.alpha(color);
+        int r = Color.red(color);
+        int g = Color.green(color);
+        int b = Color.blue(color);
+        return String.format(Locale.getDefault(), "#%02X%02X%02X%02X", a, r, g, b);
+
+    }
+
+    private void setViewColor(View view,int color){
+        view.setBackgroundColor(color);
+    }
+    private void setColorHex(TextView textView,int color){
+        textView.setText(colorHex(color));
     }
 
 }
 
-
-
-dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-
-
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-    implementation 'com.google.android.material:material:1.1.0'
-   // implementation 'org.apache.directory.studio:org.apache.commons.io:2.4'
-
-
-
-
-}

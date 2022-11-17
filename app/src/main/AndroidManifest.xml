@@ -678,7 +678,7 @@
   -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.painapp">
+    package="com.pain2d.painapp">
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_OWNER_DATA" />
     <uses-permission android:name="android.permission.WRITE_SETTINGS " />
@@ -702,7 +702,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name="PainTypeActivity"/>
+        <activity android:name=".PainTypeActivity"/>
 
         <activity android:name=".DrawActivity" />
 

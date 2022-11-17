@@ -675,51 +675,46 @@
  * <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-apply plugin: 'com.android.application'
+package com.pain2d.painapp;
 
-android {
-    compileSdkVersion 32
-//    buildToolsVersion "29.0.3"
+import android.view.GestureDetector;
+import android.view.MotionEvent;
+import android.view.ViewGroup;
 
-   // useLibrary 'org.apache.http.legacy'
-    defaultConfig {
-        applicationId "com.pain2d.painapp"
-        minSdkVersion 16
-        targetSdkVersion 32
-        versionCode 1
-        versionName "1.0"
+public class ScrollGestureListener extends GestureDetector.SimpleOnGestureListener  {
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    private DrawView targetView;
+    private float distanceXTemp = 1;
+    private float distanceYTemp = 1;
+
+    private ScaleGestureListener scaleGestureListener;
+    public ScrollGestureListener(DrawView targetView, ViewGroup viewGroup){
+        this.targetView = targetView;
     }
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-        }
+    //e1 is the MotionEvent before sliding,
+    // e2 is the MotionEvent during sliding or after each small segment of sliding,
+    // distanceX is the distance obtained by subtracting the starting sliding coordinate of the X axis from the sliding coordinate.
+    // In this way, sliding to the right is a negative number. Sliding to the left is a positive number.
+    // It should be noted here that distanceY is the sliding distance of the Y axis, and its characteristics are the same as distanceX.
+    public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX, float distanceY) {
+        distanceX = -distanceX;
+        distanceY = -distanceY;
+        distanceXTemp += distanceX;
+        distanceYTemp += distanceY;
+        targetView.setTranslationX(distanceXTemp);
+        targetView.setTranslationY(distanceYTemp);
+//        return super.onScroll(e1, e2, distanceX, distanceY);
+        return false;
     }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+
+
+    @Override
+    public boolean onDown(MotionEvent e) {
+        return true;
     }
 
-}
+    public void setScale(ScaleGestureListener scale) {
 
-
-
-dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-
-
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-    implementation 'com.google.android.material:material:1.1.0'
-   // implementation 'org.apache.directory.studio:org.apache.commons.io:2.4'
-
-
-
-
+    }
 }

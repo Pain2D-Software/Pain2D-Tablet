@@ -675,51 +675,107 @@
  * <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-apply plugin: 'com.android.application'
+package com.pain2d.painapp;
 
-android {
-    compileSdkVersion 32
-//    buildToolsVersion "29.0.3"
+import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.view.MotionEvent;
+import android.view.View;
 
-   // useLibrary 'org.apache.http.legacy'
-    defaultConfig {
-        applicationId "com.pain2d.painapp"
-        minSdkVersion 16
-        targetSdkVersion 32
-        versionCode 1
-        versionName "1.0"
+public abstract class ColorSliderView extends View implements ColorMonitor,ColorUpdate {
+    protected int baseColor = Color.WHITE;
+    private Paint colorPaint;
+    private Paint borderPaint;
+    private Paint selectorPaint;
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    private Path selectorPath;
+    private Path currentSelectorPath = new Path();
+    protected float selectorSize;
+    protected float currentValue = 1f;
+
+
+    private ColorEmitter emitter = new ColorEmitter();
+    public ColorSliderView(Context context) {
+        super(context);
+        colorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        borderPaint.setStyle(Paint.Style.STROKE);
+        borderPaint.setStrokeWidth(0);
+        borderPaint.setColor(Color.BLACK);
+        selectorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        selectorPaint.setColor(Color.BLACK);
+        selectorPath = new Path();
+        selectorPath.setFillType(Path.FillType.WINDING);
+    }
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        configurePaint(colorPaint);
+        selectorPath.reset();
+        selectorSize = h * 0.25f;
+        selectorPath.moveTo(0, 0);
+        selectorPath.lineTo(selectorSize * 2, 0);
+        selectorPath.lineTo(selectorSize, selectorSize);
+        selectorPath.close();
     }
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    @Override
+    protected void onDraw(Canvas canvas) {
+        float width = getWidth();
+        float height = getHeight();
+        canvas.drawRect(selectorSize, selectorSize, width - selectorSize, height, colorPaint);
+        canvas.drawRect(selectorSize, selectorSize, width - selectorSize, height, borderPaint);
+        selectorPath.offset(currentValue * (width - 2 * selectorSize), 0, currentSelectorPath);
+        canvas.drawPath(currentSelectorPath, selectorPaint);
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        int action = event.getActionMasked();
+        switch (action) {
+            case MotionEvent.ACTION_DOWN:
+            case MotionEvent.ACTION_MOVE:
+                update(event);
+                return true;
+            case MotionEvent.ACTION_UP:
+                return true;
         }
-    }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        return super.onTouchEvent(event);
     }
 
-}
+    public void update(MotionEvent event) {
+        updateValue(event.getX());
+        emitter.onColor(assembleColor());
+    }
 
+    void setBaseColor(int color) {
+        baseColor = color;
+        configurePaint(colorPaint);
+        emitter.onColor(color);
+        invalidate();
+    }
 
+    private void updateValue(float eventX) {
+        float left = selectorSize;
+        float right = getWidth() - selectorSize;
+        if (eventX < left) eventX = left;
+        if (eventX > right) eventX = right;
+        currentValue = (eventX - left) / (right - left);
+        invalidate();
+    }
 
-dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    protected abstract float resolveValue(int color);
 
+    protected abstract void configurePaint(Paint colorPaint);
 
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-    implementation 'com.google.android.material:material:1.1.0'
-   // implementation 'org.apache.directory.studio:org.apache.commons.io:2.4'
+    protected abstract int assembleColor();
 
-
+    @Override
+    public int getColor() {
+        return emitter.getColor();
+    }
 
 
 }

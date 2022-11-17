@@ -675,51 +675,89 @@
  * <https://www.gnu.org/licenses/why-not-lgpl.html>.
  */
 
-apply plugin: 'com.android.application'
+package com.pain2d.painapp;
 
-android {
-    compileSdkVersion 32
-//    buildToolsVersion "29.0.3"
+import java.io.File;
+import java.util.List;
+//import com.debby.R;
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.BaseAdapter;
+import android.widget.ImageView;
+import android.widget.TextView;
 
-   // useLibrary 'org.apache.http.legacy'
-    defaultConfig {
-        applicationId "com.pain2d.painapp"
-        minSdkVersion 16
-        targetSdkVersion 32
-        versionCode 1
-        versionName "1.0"
+public class MyAdapter extends BaseAdapter {
+    private LayoutInflater mInflater;
+    private Bitmap mIcon1;
+    private Bitmap mIcon2;
+    private Bitmap mIcon3;
+    private Bitmap mIcon4;
+    private List<String> items;
+    private List<String> paths;
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    public MyAdapter(Context context, List<String> it, List<String> pa) {
+        mInflater = LayoutInflater.from(context);
+        items = it;
+        paths = pa;
+        mIcon1 = BitmapFactory.decodeResource(context.getResources(), R.drawable.icons_folder);
+        mIcon2 = BitmapFactory.decodeResource(context.getResources(), R.drawable.icons_file);
+
+        //mIcon4 = BitmapFactory.decodeResource(context.getResources(),R.drawable.doc);
     }
 
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    @Override
+    public int getCount() {
+        return items.size();
+    }
+
+    @Override
+    public Object getItem(int position) {
+        return items.get(position);
+    }
+
+    @Override
+    public long getItemId(int position) {
+        return position;
+    }
+
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent) {
+        ViewHolder holder;
+
+        if (convertView == null) {
+            convertView = mInflater.inflate(R.layout.files_list, null);
+            holder = new ViewHolder();
+            holder.text = (TextView) convertView.findViewById(R.id.text);
+            holder.icon = (ImageView) convertView.findViewById(R.id.icon);
+
+            convertView.setTag(holder);
+        } else {
+            holder = (ViewHolder) convertView.getTag();
         }
+        File file = new File(paths.get(position).toString());
+        if (items.get(position).toString().equals("b1")) {
+            holder.text.setText("Return to root");
+            holder.icon.setImageBitmap(mIcon1);
+        } else if (items.get(position).toString().equals("b2")) {
+            holder.text.setText("Return to parent directory");
+            holder.icon.setImageBitmap(mIcon2);
+        } else {
+            holder.text.setText(file.getName());
+            if (file.isDirectory()) {
+                holder.icon.setImageBitmap(mIcon3);
+            } else {
+                holder.icon.setImageBitmap(mIcon4);
+            }
+        }
+        return convertView;
     }
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+
+    private class ViewHolder {
+        TextView text;
+        ImageView icon;
     }
-
-}
-
-
-
-dependencies {
-    implementation fileTree(dir: 'libs', include: ['*.jar'])
-
-
-    implementation 'androidx.appcompat:appcompat:1.1.0'
-    implementation 'androidx.constraintlayout:constraintlayout:1.1.3'
-    testImplementation 'junit:junit:4.12'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.1'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
-    implementation 'com.google.android.material:material:1.1.0'
-   // implementation 'org.apache.directory.studio:org.apache.commons.io:2.4'
-
-
-
-
 }
