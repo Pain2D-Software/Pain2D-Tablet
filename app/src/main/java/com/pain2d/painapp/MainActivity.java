@@ -927,6 +927,8 @@ public class MainActivity extends Activity {
                                 "#@author Wenfeng Zhu\n" +
                                 "\n" +
                                 "# @author Nefissa Khedher\n" +
+                                "\n" +
+                                "# @author Jonas Eckert\n" +
                                 "###################################################################", Toast.LENGTH_LONG).show();
             }
         });
