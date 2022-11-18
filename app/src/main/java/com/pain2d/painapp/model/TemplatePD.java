@@ -677,16 +677,47 @@
 
 package com.pain2d.painapp.model;
 
-import java.io.File;
+import android.os.Parcel;
+import android.os.Parcelable;
 
-public class TemplatePD {
+import java.io.File;
+import java.net.URI;
+
+public class TemplatePD implements Parcelable {
     public static final String FILE_IMAGE_COORDINATES = "imageCoordinates.json";
+    public static final Creator<TemplatePD> CREATOR = new Creator<TemplatePD>() {
+        @Override
+        public TemplatePD createFromParcel(Parcel in) {
+            return new TemplatePD(in);
+        }
+
+        @Override
+        public TemplatePD[] newArray(int size) {
+            return new TemplatePD[size];
+        }
+    };
     private final String name;
     private final File location;
 
     public TemplatePD(File location) {
         this.name = location.getName();
         this.location = location;
+    }
+
+    protected TemplatePD(Parcel in) {
+        name = in.readString();
+        location = new File(URI.create(in.readString()));
+    }
+
+    @Override
+    public void writeToParcel(Parcel dest, int flags) {
+        dest.writeString(name);
+        dest.writeString(location.toURI().toString());
+    }
+
+    @Override
+    public int describeContents() {
+        return 0;
     }
 
     public String getName() {
