@@ -690,9 +690,7 @@ import androidx.annotation.Nullable;
 import com.pain2d.painapp.model.TemplatePD;
 
 import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -710,6 +708,10 @@ public class TemplatePDRepository {
     private final Context applicationContext;
 
     private final Map<String, TemplatePD> templatePDs;
+    /**
+     * A {@link TemplatePD} instance representing the legacy location.
+     */
+    private final TemplatePD legacyTemplatePD;
     private final SharedPreferences pdToTemplateMapping;
     private final File templateDirectory;
 
@@ -727,21 +729,22 @@ public class TemplatePDRepository {
 
     private TemplatePDRepository(Context applicationContext) {
         this.applicationContext = applicationContext;
-        pdToTemplateMapping = applicationContext.getSharedPreferences(PD_TO_TEMPLATE_MAPPING, Context.MODE_PRIVATE);
-        templateDirectory = new File(applicationContext.getFilesDir(), TEMPLATE_DIRECTORY);
+        this.legacyTemplatePD = new TemplatePD(new File(applicationContext.getFilesDir(), "jsonfiles/temps/name.json"));
+        this.pdToTemplateMapping = applicationContext.getSharedPreferences(PD_TO_TEMPLATE_MAPPING, Context.MODE_PRIVATE);
+        this.templateDirectory = new File(applicationContext.getFilesDir(), TEMPLATE_DIRECTORY);
         final File[] templates = templateDirectory.listFiles();
         if (templates == null) {
             if (!templateDirectory.mkdirs()) {
                 Log.w(TAG, "TemplatePDRepository: failed to create directory for templates: "
                         + templateDirectory);
             }
-            templatePDs = new HashMap<>();
+            this.templatePDs = new HashMap<>();
         } else {
             // load all templates already imported
-            templatePDs = new HashMap<>((int) (templates.length / 0.75f) + 1, 0.75f);
+            this.templatePDs = new HashMap<>((int) (templates.length / 0.75f) + 1, 0.75f);
             for (File template : templates) {
                 final TemplatePD templatePD = new TemplatePD(template);
-                templatePDs.put(templatePD.getName(), templatePD);
+                this.templatePDs.put(templatePD.getName(), templatePD);
             }
         }
     }
