@@ -724,14 +724,21 @@ public class DrawView extends View {
     private Integer[] y_array;
     private Integer[] x_array_import;
     private Integer[] y_array_import;
+    private Integer[] x_array_negative;
+    private Integer[] y_array_negative;
     StringBuilder strb = new StringBuilder();
+    StringBuilder strb_negativ = new StringBuilder();
     StringBuilder strb_import = new StringBuilder();
 
     private Bitmap mBitmap;
     private Bitmap hBitmap;
     private Bitmap cBitmap;
+    private Bitmap nBitmap; // Bitmap for negative
+    private Bitmap nBitmap_reserve;
     private Canvas mCanvas;
     private Path mPath;
+    private Paint nBitmapPaint;
+    private Paint nBitmapreservePaint;
     private Paint mBitmapPaint;
     private Paint hBitmapPaint;
     private Paint cBitmapPaint;
@@ -785,6 +792,8 @@ public class DrawView extends View {
         sbMap = new HashMap<String, Bitmap>();
 
         this.importBackGround();
+        this.importNegative();
+        this.negativ_reserve(nBitmap);
 
 
         mPath = new Path();
@@ -805,6 +814,11 @@ public class DrawView extends View {
         hBitmapPaint.setColor(Color.BLACK);
         cBitmapPaint = new Paint(Paint.DITHER_FLAG);
         cBitmapPaint.setColor(Container.typeColor);
+
+        nBitmapPaint = new Paint(Paint.DITHER_FLAG);
+        nBitmapPaint.setColor(Color.WHITE);
+        nBitmapreservePaint =new Paint(Paint.DITHER_FLAG);
+        nBitmapreservePaint.setColor(Color.TRANSPARENT);
 
         mPaint = new Paint();
         mPaint.setColor(paintColor);
@@ -931,6 +945,43 @@ public class DrawView extends View {
         for (int i = 0; i < x_array.length; i++) {
             hBitmap.setPixel((x_array[i]), (1169 - y_array[i]), Color.BLACK);
         }
+
+    }
+
+    protected void importNegative(){
+        try{
+            // TODO: 12.11.22 never closed
+            InputStream is = new FileInputStream(context.getFilesDir().getPath()+"/jsonfiles/temps/negativeCoordinates.json");
+            InputStreamReader isr = new InputStreamReader(is,"UTF-8");
+            BufferedReader br = new BufferedReader(isr);
+            String str = "";
+            while ((str = br.readLine()) != null){
+                strb_negativ.append(str);
+            }
+        }catch (IOException e){
+            e.printStackTrace();
+        }
+
+        try {
+            JSONArray jsonArray = new JSONArray(strb_negativ.toString());
+            int num_negative = jsonArray.length() / 2;
+            x_array_negative = new Integer[num_negative];
+            y_array_negative = new Integer[num_negative];
+            for (int i = 0; i < num_negative; i++){
+                x_array_negative[i] = jsonArray.getInt(i);
+                y_array_negative[i] = jsonArray.getInt(num_negative + i);
+            }
+        }catch (JSONException e){
+            e.printStackTrace();
+        }
+        nBitmap = Bitmap.createBitmap(828,1169,Bitmap.Config.ARGB_8888);
+        for (int i = 0; i < x_array_negative.length; i++){
+            nBitmap.setPixel((x_array_negative[i]),(1169-y_array_negative[i]),Color.RED);
+        }
+        /*nBitmap = Bitmap.createBitmap(1200,1800,Bitmap.Config.ARGB_8888);
+        for (int i = 0; i < x_array_negative.length; i++){
+            nBitmap.setPixel((x_array_negative[i]),(1200-y_array_negative[i]),Color.RED);
+        }*/
     }
 
     protected void importImage() {
@@ -1000,6 +1051,25 @@ public class DrawView extends View {
         this.pressed = pressed;
     }
 
+    public void negativ_reserve(Bitmap bitmap){
+        int width = bitmap.getWidth();
+        int height = bitmap.getHeight();
+        int pixels = width*height;
+
+        int[] pixel = new int[pixels];
+        bitmap.getPixels(pixel,0,width,0,0,width,height);
+        for (int i = 0; i < pixels; i++) {
+            if (pixel[i] == Color.RED)
+                pixel[i] = Color.WHITE;
+            else
+                pixel[i] = Color.TRANSPARENT;
+        }
+        bitmap.setPixels(pixel, 0, width, 0, 0, width, height);
+        nBitmap_reserve = Bitmap.createBitmap(bitmap,0,0,828,1169);
+        //nBitmap_reserve = Bitmap.createBitmap(bitmap,0,0,1200,1800);
+    }
+
+    //called when user draw
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
         Log.e(">>BETA 01","mode is "+getMode());
@@ -1042,6 +1112,7 @@ public class DrawView extends View {
 
         }
         canvas.drawBitmap(zoom(mBitmap, zoom), 0, 0, mBitmapPaint);
+        canvas.drawBitmap(zoom(nBitmap_reserve, proportion), 0, 0, null);
 
         Log.e(">>BETA 02","mode is "+getMode());
         switch (Mode) {
