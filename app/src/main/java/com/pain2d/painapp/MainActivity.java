@@ -691,7 +691,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
-import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
 
@@ -825,17 +824,17 @@ public class MainActivity extends Activity {
         rwList.writeList(this, RWList.LIST_COLOR, newColorsList);
         // Now apply renaming to already saved pain drawings
         if (!renamings.isEmpty()) {
-            renameFilesInDirectoryRecursivelypatchToVersion4(renamings, new File(getExternalFilesDir("").getAbsolutePath()));
+            renameFilesInDirectoryRecursivelyPatchToVersion4(renamings, new File(getExternalFilesDir("").getAbsolutePath()));
         }
     }
 
-    private static void renameFilesInDirectoryRecursivelypatchToVersion4(Map<String, String> renamings, File root) {
+    private static void renameFilesInDirectoryRecursivelyPatchToVersion4(Map<String, String> renamings, File root) {
         File[] files = root.listFiles();
         if (files != null) {
             for (File file : files) {
                 // logic matches com.pain2d.painapp.FileSelectActivity.inflateListView@1ed0e4c597c7a8529b5285f9bb827b201fae17b3
                 if (file.isDirectory()) {
-                    renameFilesInDirectoryRecursivelypatchToVersion4(renamings, file);
+                    renameFilesInDirectoryRecursivelyPatchToVersion4(renamings, file);
                 } else {
                     // logic matches com.pain2d.painapp.FileSelectActivity#733@1ed0e4c597c7a8529b5285f9bb827b201fae17b3
                     String path = file.getPath();
