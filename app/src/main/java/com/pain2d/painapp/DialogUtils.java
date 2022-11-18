@@ -721,11 +721,6 @@ public class DialogUtils {
 
     private DialogConfirm dialogConfirm;
 
-    //set password
-    private final static String correct = "zhufissa";
-
-
-
 
     private static String chooseColor;
     private static int color;
@@ -782,23 +777,10 @@ public class DialogUtils {
         window.setWindowAnimations(R.style.AppTheme);
         saveDialog.show();
 
-        final EditText password = v.findViewById(R.id.password_save);
         final EditText patientID = v.findViewById(R.id.editTextNumberSigned);
 
 
         patientID.setText(fileNum);
-
-        Switch showswitch = v.findViewById(R.id.save_switch);
-        showswitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (buttonView.isChecked()) {
-                    password.setTransformationMethod(HideReturnsTransformationMethod.getInstance());
-                } else {
-                    password.setTransformationMethod(PasswordTransformationMethod.getInstance());
-                }
-            }
-        });
 
         Button cancel = v.findViewById(R.id.save_cancel);
         cancel.setOnClickListener(new View.OnClickListener() {
@@ -812,29 +794,22 @@ public class DialogUtils {
             @RequiresApi(api = Build.VERSION_CODES.KITKAT)
             @Override
             public void onClick(View v) {
-                String string = password.getText().toString();
-                if (string.equals(correct) &&  !patientID.getText().toString().isEmpty()){
+                if (!patientID.getText().toString().isEmpty()) {
 
                     SaveJson saveJson = new SaveJson();
 
-                    saveJson.exportJson(map,proportion,filePath,patientID.getText().toString());
+                    saveJson.exportJson(map, proportion, filePath, patientID.getText().toString());
                     saveDialog.dismiss();
                     toast = Toast.makeText(saveDialog.getContext(), "File saved successfully", Toast.LENGTH_SHORT);
-                    toast.setGravity(Gravity.CENTER,0,0);
+                    toast.setGravity(Gravity.CENTER, 0, 0);
                     toast.show();
 
-                    if(Container.isFromFilesList) {
+                    if (Container.isFromFilesList) {
 
                     }
 
-                }
-                else if (string.isEmpty()){
-                    toast = Toast.makeText(saveDialog.getContext(), "Patient ID cannot be empty!", Toast.LENGTH_SHORT);
-                    toast.setGravity(Gravity.CENTER,0,0);
-                    toast.show();
-                }
-                else if (!string.equals(correct)){
-                    toast = Toast.makeText(saveDialog.getContext(), "Wrong Password!", Toast.LENGTH_SHORT);
+                } else {
+                    toast = Toast.makeText(saveDialog.getContext(), "No patient id supplied", Toast.LENGTH_SHORT);
                     toast.setGravity(Gravity.CENTER,0,0);
                     toast.show();
                 }
@@ -869,19 +844,6 @@ public class DialogUtils {
 
 
         final EditText typeName = v.findViewById(R.id.typeName);
-        final EditText password = v.findViewById(R.id.password_add);
-
-        Switch showswitch = v.findViewById(R.id.password_switch);
-        showswitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (buttonView.isChecked()) {
-                    password.setTransformationMethod(HideReturnsTransformationMethod.getInstance());
-                } else {
-                    password.setTransformationMethod(PasswordTransformationMethod.getInstance());
-                }
-            }
-        });
 
         Button cancel = v.findViewById(R.id.password_cancel);
         cancel.setOnClickListener(new View.OnClickListener() {
@@ -895,8 +857,7 @@ public class DialogUtils {
             @RequiresApi(api = Build.VERSION_CODES.KITKAT)
             @Override
             public void onClick(View v) {
-                String string = password.getText().toString();
-                if (string.equals(correct) && !typeName.getText().toString().isEmpty() && chooseColor != null){
+                if (!typeName.getText().toString().isEmpty() && chooseColor != null){
                     Log.e("BETA","I'm trying to confirm the new Pain");
 
                     RWList.writeList(context,typeName.getText().toString(),"typeList.txt");
@@ -914,17 +875,13 @@ public class DialogUtils {
 
 
                 }
-                else if (typeName.getText().toString().isEmpty()){
-                    toast = Toast.makeText(addDialog.getContext(), "Type Name cannot be empty!", Toast.LENGTH_SHORT);
+                else if (chooseColor == null){
+                    toast = Toast.makeText(addDialog.getContext(), "Please choose color!", Toast.LENGTH_SHORT);
                     toast.setGravity(Gravity.CENTER,0,0);
                     toast.show();
                 }
-                else if (!string.equals(correct)){
-                    toast = Toast.makeText(addDialog.getContext(), "Wrong Password!", Toast.LENGTH_SHORT);
-                    toast.setGravity(Gravity.CENTER,0,0);
-                    toast.show();
-                }else if (chooseColor == null){
-                    toast = Toast.makeText(addDialog.getContext(), "Please choose color!", Toast.LENGTH_SHORT);
+                else {
+                    toast = Toast.makeText(addDialog.getContext(), "Type Name cannot be empty!", Toast.LENGTH_SHORT);
                     toast.setGravity(Gravity.CENTER,0,0);
                     toast.show();
                 }
@@ -969,90 +926,4 @@ public class DialogUtils {
         return String.format(Locale.getDefault(), "#%02X%02X%02X%02X", a, r, g, b);
 
     }
-
-
-    protected void selectPasswordDialog(final Context context, Activity activity, String fileNum){
-
-
-        final RWList RWList = new RWList();
-
-        LayoutInflater inflater = LayoutInflater.from(context);
-        View v = inflater.inflate(R.layout.dialog_password_select,null );
-
-        final Dialog saveDialog = new Dialog(context, R.style.MyDialogStyle);
-        saveDialog.setContentView(R.layout.dialog_password_select);
-        saveDialog.setCancelable(false);
-        saveDialog.setCanceledOnTouchOutside(false);
-
-        saveDialog.setContentView(v, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT));
-
-        Window window = saveDialog.getWindow();
-        WindowManager.LayoutParams lp = window.getAttributes();
-        //lp.gravity = Gravity.CENTER;
-        window.setGravity(Gravity.CENTER_HORIZONTAL);
-        window.setAttributes(lp);
-        window.setWindowAnimations(R.style.AppTheme);
-        saveDialog.show();
-
-        final EditText password = v.findViewById(R.id.password_save);
-        final EditText patientID = v.findViewById(R.id.editTextNumberSigned);
-
-        Switch showswitch = v.findViewById(R.id.save_switch);
-        showswitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (buttonView.isChecked()) {
-                    password.setTransformationMethod(HideReturnsTransformationMethod.getInstance());
-                } else {
-                    password.setTransformationMethod(PasswordTransformationMethod.getInstance());
-                }
-            }
-        });
-
-        Button cancel = v.findViewById(R.id.save_cancel);
-        cancel.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                saveDialog.dismiss();
-            }
-        });
-        final Button confirm = v.findViewById(R.id.save_confirm);
-        confirm.setOnClickListener(new View.OnClickListener() {
-            @RequiresApi(api = Build.VERSION_CODES.KITKAT)
-            @Override
-            public void onClick(View v) {
-                String string = password.getText().toString();
-
-                if (string.equals(correct)){
-
-                    saveDialog.dismiss();
-                    toast = Toast.makeText(saveDialog.getContext(), "Access Granted", Toast.LENGTH_SHORT);
-                    toast.setGravity(Gravity.CENTER,0,0);
-                    toast.show();
-
-                    if(Container.isFromFilesList) {
-                        Intent intent = new Intent(activity,DrawActivity.class);
-                        intent.putExtra("FILE_NUM", fileNum);
-                        activity.startActivity(intent);
-                    }
-
-
-                }
-                else if (string.isEmpty()){
-                    toast = Toast.makeText(saveDialog.getContext(), "empty!", Toast.LENGTH_SHORT);
-                    toast.setGravity(Gravity.CENTER,0,0);
-                    toast.show();
-                }
-                else if (!string.equals(correct)){
-                    toast = Toast.makeText(saveDialog.getContext(), "Wrong Password!", Toast.LENGTH_SHORT);
-                    toast.setGravity(Gravity.CENTER,0,0);
-                    toast.show();
-                }
-
-            }
-        });
-    }
-
 }

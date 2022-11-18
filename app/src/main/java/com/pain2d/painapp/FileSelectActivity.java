@@ -747,12 +747,11 @@ public class FileSelectActivity extends AppCompatActivity implements DialogUtils
 
                         Container.isFromFilesList = true;
 
-                        DialogUtils saveDialog = new DialogUtils();
-//                    saveDialog.savePasswordDialog(context, view.getSbMap(), proportion, view.getContext().getFilesDir().getAbsolutePath());
-                        saveDialog.selectPasswordDialog(context,FileSelectActivity.this,fileNum );
-
-
-
+                        if(Container.isFromFilesList) { // This lock was inlined after removing password questions. It did the check so it is kept for not.
+                            Intent intent = new Intent(FileSelectActivity.this,DrawActivity.class);
+                            intent.putExtra("FILE_NUM", fileNum);
+                            startActivity(intent);
+                        }
                     }
                     else {
                         Toast.makeText(FileSelectActivity.this, "Please select a json file!", Toast.LENGTH_SHORT).show();
