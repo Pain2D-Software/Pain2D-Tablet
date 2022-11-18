@@ -722,6 +722,7 @@ public class FileSelectActivity extends AppCompatActivity implements DialogUtils
 
         File root = new File(getExternalFilesDir("").getAbsolutePath());
         if (root.exists()) {
+            // Patch code in MainActivity assumes the same location.
             currentParent = root;
             currentFiles = root.listFiles();
             inflateListView(currentFiles);

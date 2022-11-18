@@ -685,6 +685,7 @@ import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -693,60 +694,196 @@ import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
 
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 
 public class MainActivity extends Activity {
+    private static final String TAG = MainActivity.class.getName();
     public static final int FILE_RESULT_CODE = 1;
     public static final int RESULT_OK = 1;
-    Context context = this;
+    private static final String PREFERENCE_LAST_START_VERSION = "last_start_version";
+    private static final List<PainType> PAIN_TYPES = Collections.unmodifiableList(Arrays.asList(
+            new PainType("undefined", "#000000"),
+            new PainType("paroxysmal", "#FFFF0000", "anfallsartiger"),
+            new PainType("shooting", "#FF00FF00", "einschießender"),
+            new PainType("burning", "#FFFF00FF", "brennend"),
+            new PainType("dull", "#FFD2E6A4", "dumpf"),
+            new PainType("boring", "#FFE3686D", "bohrend"),
+            new PainType("throbbing", "#FF9B083E", "pochend"),
+            new PainType("stabbing", "#AA436944", "stechend"),
+            new PainType("pulling", "#FFE11330", "ziehend"),
+            new PainType("hot", "#FF6C87D7", "heiß"),
+            new PainType("acute", "#AAFFAC30", "akut"),
+            new PainType("formication", "#FFFF4929", "Ameisenlaufen"),
+            new PainType("Electricity", "#FFA1C3B5", "Stromkribbeln"),
+            new PainType("Numbness", "#FFC0D843", "Taubheistgefühl"),
+            new PainType("colic", "#FF33224A", "kolik"),
+            new PainType("spasmodic", "#FF126155", "krampfartig"),
+            new PainType("lightning", "#FF269383", "blitzartig-elektrisierend", " blitzartig-elektrisierend"), // Yes there was one version with a space
+            new PainType("tingling", "#F4A900"),
+            new PainType("warm", "#BB7100"),
+            new PainType("fullness", "#75B8FB"),
+            new PainType("soreness", "#6CA406"),
+            new PainType("pressure", "#1F37A1")
+    ));
 
-    public boolean isReady(){
+    public boolean isReady() {
         SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
         return sharedPref.getBoolean("ready", false);
     }
 
-    public void setReady(){
+    public void setReady() {
         SharedPreferences sharedPref = getPreferences(Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putBoolean("ready", true);
-        editor.commit();
+        editor.putInt(PREFERENCE_LAST_START_VERSION, BuildConfig.VERSION_CODE);
+        editor.apply();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
-    public void setup(){
-        if (isReady()) return;
-        init();
-        setReady();
+    public void setup() {
+        if (!isReady()) {
+            init();
+            setReady();
+        } else {
+            // Handle app updates here. Since this is added later, if the value is not present, an
+            // update must only occur if the app did not start for the first time.
+            SharedPreferences preferences = getPreferences(Context.MODE_PRIVATE);
+            // Default forces an update: App already run but in a version that didn't had this logic.
+            int lastVersion = preferences.getInt(PREFERENCE_LAST_START_VERSION, BuildConfig.VERSION_CODE - 1);
+            if (lastVersion < BuildConfig.VERSION_CODE) {
+                // For now only one possible increment from <4 to 4
+                Log.i(TAG, "setup: Start patching from old version to " + BuildConfig.VERSION_CODE);
+                patchToVersion4();
+                // Mark changes as done
+                preferences.edit()
+                        .putInt(PREFERENCE_LAST_START_VERSION, BuildConfig.VERSION_CODE)
+                        .apply();
+                Log.i(TAG, "setup: Update to " + BuildConfig.VERSION_CODE + " complete");
+            }
+        }
     }
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
-    public void addPain(RWList rwList, String name, String color){
-        rwList.writeList(this,name,"typeList.txt");
-        rwList.writeList(context,color,"colorList.txt");
+    private void patchToVersion4() {
+        // Renaming of pain types
+        // First update the old pain type to the new one but only if the new one does not exist.
+        RWList rwList = new RWList();
+        final Map<String, String> currentPainTypes;
+        {
+            final ArrayList<String> painTypes = rwList.readList(this, RWList.LIST_PAIN_TYPES);
+            final ArrayList<String> colors = rwList.readList(this, RWList.LIST_COLOR);
+            currentPainTypes = new LinkedHashMap<>((int) (painTypes.size() / 0.75f) + 1, 0.75f);
+            for (int i = 0; i < painTypes.size(); i++) {
+                String name = painTypes.get(i);
+                currentPainTypes.put(name, colors.get(i));
+            }
+        }
+        final Map<String, String> newPainTypes = new LinkedHashMap<>((int) (currentPainTypes.size() / 0.75f) + 1, 0.75f);
+        final Map<String, String> renamings = new HashMap<>((int) (PAIN_TYPES.size() / 0.75f) + 1, 0.75f);
+        for (PainType painType : PAIN_TYPES) {
+            String name = painType.name;
+            String existingColor = currentPainTypes.remove(name);
+            if (existingColor == null) {
+                newPainTypes.put(name, painType.color);
+                Log.i(TAG, "patchToVersion4: Add pain type " + painType);
+            } else {
+                // Keep old color
+                newPainTypes.put(name, existingColor);
+                Log.i(TAG, "patchToVersion4: Reusing existing pain type for " + name
+                        + (existingColor.equals(painType.color) ? "" : " with color " + existingColor));
+            }
+            for (String oldName : painType.oldNames) {
+                if (currentPainTypes.remove(oldName) != null) {
+                    renamings.put(oldName, name);
+                    Log.i(TAG, "patchToVersion4: Rename pain type " + oldName.toUpperCase()
+                            + " to " + name.toUpperCase());
+                }
+            }
+        }
+        final List<String> newPainTypesList = new ArrayList<>(newPainTypes.size() + currentPainTypes.size());
+        final List<String> newColorsList = new ArrayList<>(newPainTypesList.size());
+        for (Map.Entry<String, String> e : newPainTypes.entrySet()) {
+            newPainTypesList.add(e.getKey());
+            newColorsList.add(e.getValue());
+        }
+        for (Map.Entry<String, String> e : currentPainTypes.entrySet()) {
+            newPainTypesList.add(e.getKey());
+            newColorsList.add(e.getValue());
+        }
+        Log.i(TAG, "patchToVersion4: New pain types are " + newPainTypesList);
+        rwList.writeList(this, RWList.LIST_PAIN_TYPES, newPainTypesList);
+        rwList.writeList(this, RWList.LIST_COLOR, newColorsList);
+        // Now apply renaming to already saved pain drawings
+        if (!renamings.isEmpty()) {
+            renameFilesInDirectoryRecursivelypatchToVersion4(renamings, new File(getExternalFilesDir("").getAbsolutePath()));
+        }
+    }
+
+    private static void renameFilesInDirectoryRecursivelypatchToVersion4(Map<String, String> renamings, File root) {
+        File[] files = root.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                // logic matches com.pain2d.painapp.FileSelectActivity.inflateListView@1ed0e4c597c7a8529b5285f9bb827b201fae17b3
+                if (file.isDirectory()) {
+                    renameFilesInDirectoryRecursivelypatchToVersion4(renamings, file);
+                } else {
+                    // logic matches com.pain2d.painapp.FileSelectActivity#733@1ed0e4c597c7a8529b5285f9bb827b201fae17b3
+                    String path = file.getPath();
+                    int painTypeBegin = path.lastIndexOf("_") + 1;
+                    int painTypeEnd = path.length() - 5;
+                    String painType = path.substring(painTypeBegin, painTypeEnd);
+                    String newName = renamings.get(painType);
+                    if (newName != null) {
+                        File newFile = new File(path.substring(0, painTypeBegin) + newName
+                                + path.substring(painTypeEnd));
+                        Log.i(TAG, "patchToVersion4: Rename file " + file + " to " + newFile);
+                        for (int remainingTries = 2; remainingTries >= 0; remainingTries--) {
+                            if (file.renameTo(newFile)) {
+                                break;
+                            } else if (remainingTries == 0) {
+                                Log.e(TAG, "patchingToVersion4: Finally failed to rename file " + file + " to " + newFile);
+                            } else {
+                                Log.e(TAG, "patchingToVersion4: Failed to rename file " + file + " to " + newFile + " stop trying");
+                                try {
+                                    Thread.sleep(100);
+                                } catch (InterruptedException ignored) {
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } // else nothing to rename
+    }
+
+    @Deprecated
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    public void addPain(RWList rwList, String name, String color, String... otherNames) {
+        rwList.writeList(this, name, RWList.LIST_PAIN_TYPES);
+        rwList.writeList(this, color, RWList.LIST_COLOR);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
-    public void init(){
+    public void init() {
         RWList rwList = new RWList();
         //add new pain called none ( black )
-        addPain(rwList,"anfallsartiger","#FFFF0000");
-        addPain(rwList,"einschießender","#FF00FF00");
-        addPain(rwList,"brennend","#FFFF00FF");
-        addPain(rwList,"dumpf","#FFD2E6A4");
-        addPain(rwList,"bohrend","#FFE3686D");
-        addPain(rwList,"pochend","#FF9B083E");
-        addPain(rwList,"stechend","#AA436944");
-        addPain(rwList,"ziehend","#FFE11330");
-        addPain(rwList,"heiß","#FF6C87D7");
-        addPain(rwList,"akut","#AAFFAC30");
-        addPain(rwList,"Ameisenlaufen","#FFFF4929");
-        addPain(rwList,"Stromkribbeln","#FFA1C3B5");
-        addPain(rwList,"Taubheistgefühl","#FFC0D843");
-        addPain(rwList,"kolik","#FF33224A");
-        addPain(rwList,"krampfartig","#FF126155");
-        addPain(rwList," blitzartig-elektrisierend","#FF269383");
-
-
+        final List<String> painTypes = new ArrayList<>(PAIN_TYPES.size());
+        final List<String> colors = new ArrayList<>(PAIN_TYPES.size());
+        for (PainType painType : PAIN_TYPES) {
+            painTypes.add(painType.name);
+            colors.add(painType.color);
+        }
+        rwList.writeList(this, RWList.LIST_PAIN_TYPES, painTypes);
+        rwList.writeList(this, RWList.LIST_COLOR, colors);
     }
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
@@ -756,14 +893,14 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         setup();
         RWList rwList = new RWList();
-        Container.colorList= rwList.readList(context,"colorList.txt");
-        Container.typeList = rwList.readList(context,"typeList.txt");
+        Container.colorList = rwList.readList(this, RWList.LIST_COLOR);
+        Container.typeList = rwList.readList(this, RWList.LIST_PAIN_TYPES);
 
 
         DisplayMetrics dm = getResources().getDisplayMetrics();
         int screenWidth = dm.widthPixels;
         int screenHeight = dm.heightPixels;
-        Container.proportion = (float) (screenWidth*0.8)/(float) (827);
+        Container.proportion = (float) (screenWidth * 0.8) / (float) (827);
 
         ImageView infoview = (ImageView) findViewById(R.id.button_info);
         infoview.setOnClickListener(new View.OnClickListener() {
@@ -771,33 +908,33 @@ public class MainActivity extends Activity {
             public void onClick(View view) {
                 Toast.makeText(getApplicationContext(),
                         "# Pain2D-Tablet is part of Pain2D-Software package\n" +
-                        "#\n" +
-                        "# Filename is part of Pain2D-Designer: you can redistribute it and/or modify\n" +
-                        "# it under the terms of the GNU General Public License as published by\n" +
-                        "# the Free Software Foundation, either version 3 of the License, or\n" +
-                        "# (at your option) any later version.\n" +
-                        "#\n" +
-                        "# Filename is distributed in the hope that it will be useful,\n" +
-                        "# but WITHOUT ANY WARRANTY; without even the implied warranty of\n" +
-                        "# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n" +
-                        "# GNU General Public License for more details.\n" +
-                        "#\n" +
-                        "# You should have received a copy of the GNU General Public License\n" +
-                        "# along with Filename  If not, see <http://www.gnu.org/licenses/>.\n" +
-                        "#\n" +
-                        "###################################################################\n" +
-                        "#\n" +
-                        "#@author Wenfeng Zhu\n" +
-                        "\n" +
-                        "# @author Nefissa Khedher\n" +
-                        "###################################################################",Toast.LENGTH_LONG).show();
+                                "#\n" +
+                                "# Filename is part of Pain2D-Designer: you can redistribute it and/or modify\n" +
+                                "# it under the terms of the GNU General Public License as published by\n" +
+                                "# the Free Software Foundation, either version 3 of the License, or\n" +
+                                "# (at your option) any later version.\n" +
+                                "#\n" +
+                                "# Filename is distributed in the hope that it will be useful,\n" +
+                                "# but WITHOUT ANY WARRANTY; without even the implied warranty of\n" +
+                                "# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n" +
+                                "# GNU General Public License for more details.\n" +
+                                "#\n" +
+                                "# You should have received a copy of the GNU General Public License\n" +
+                                "# along with Filename  If not, see <http://www.gnu.org/licenses/>.\n" +
+                                "#\n" +
+                                "###################################################################\n" +
+                                "#\n" +
+                                "#@author Wenfeng Zhu\n" +
+                                "\n" +
+                                "# @author Nefissa Khedher\n" +
+                                "###################################################################", Toast.LENGTH_LONG).show();
             }
         });
 
-        ImageView imageView = (ImageView)findViewById(R.id.app_icon);
+        ImageView imageView = (ImageView) findViewById(R.id.app_icon);
         ViewGroup.LayoutParams params = imageView.getLayoutParams();
-        params.width = screenWidth*2/3;
-        params.height = screenWidth*2/3;
+        params.width = screenWidth * 2 / 3;
+        params.height = screenWidth * 2 / 3;
 
         //Button pointing to Draw Page
         Button bt1 = (Button) findViewById(R.id.goToDraw);
@@ -808,7 +945,6 @@ public class MainActivity extends Activity {
                 startActivity(intent);
             }
         });
-
 
 
         //Button pointing to File Page
@@ -841,7 +977,7 @@ public class MainActivity extends Activity {
             }
         });*/
 
-        Button bt3 = (Button)findViewById(R.id.button_display);
+        Button bt3 = (Button) findViewById(R.id.button_display);
         bt3.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -853,7 +989,7 @@ public class MainActivity extends Activity {
             }
         });
 
-        Button bt4 = (Button)findViewById(R.id.button_redraw);
+        Button bt4 = (Button) findViewById(R.id.button_redraw);
         bt4.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -874,13 +1010,13 @@ public class MainActivity extends Activity {
         if (RESULT_OK == resultCode) {
             //Bundle bundle = null;
             if (data != null && (data.getExtras()) != null) {
-             //   TextView textView = (TextView) findViewById(R.id.filePath);
+                //   TextView textView = (TextView) findViewById(R.id.filePath);
                 //Show file path in Text View
-              //  textView.setText("The folder you choose is：" + "\n" + filePath);
+                //  textView.setText("The folder you choose is：" + "\n" + filePath);
                 //Determine the corresponding color according to the second half of the path string
                 String str = filePath;
 
-                Container.typeName = str.substring(filePath.lastIndexOf("_")+1,filePath.length()-5);
+                Container.typeName = str.substring(filePath.lastIndexOf("_") + 1, filePath.length() - 5);
                 Container.typeColor = Color.parseColor(Container.colorList.get(Container.typeList.indexOf(Container.typeName)));
 
                 Container.ifImport = true;
@@ -888,5 +1024,27 @@ public class MainActivity extends Activity {
         }
     }
 
+    private static final class PainType {
+        private final String name;
+        private final String color;
+        private final String[] oldNames;
 
+        private PainType(String name, String color, String... oldNames) {
+            this.name = name.toUpperCase(Locale.ROOT);
+            this.color = color;
+            this.oldNames = oldNames;
+            for (int i = 0; i < oldNames.length; i++) {
+                oldNames[i] = oldNames[i].toUpperCase(Locale.ROOT);
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "PainType{" +
+                    "name='" + name + '\'' +
+                    ", color='" + color + '\'' +
+                    ", oldNames=" + Arrays.toString(oldNames) +
+                    '}';
+        }
+    }
 }

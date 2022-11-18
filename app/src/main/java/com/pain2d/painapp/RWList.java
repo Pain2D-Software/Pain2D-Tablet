@@ -689,8 +689,13 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
+
 //Read and write files
 public class RWList {
+
+    public static final String LIST_COLOR = "colorList.txt";
+    public static final String LIST_PAIN_TYPES = "typeList.txt";
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
     protected ArrayList<String> readList(Context context,String fileName) {
@@ -710,26 +715,24 @@ public class RWList {
     }
 
     @RequiresApi(api = Build.VERSION_CODES.KITKAT)
-    protected void writeList(Context context, String typename,String fileName){
+    protected void writeList(Context context, String typename, String fileName) {
+        ArrayList<String> arrayList = readList(context, fileName);
+        arrayList.add(typename);
+        writeList(context, fileName, arrayList);
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.KITKAT)
+    protected void writeList(Context context, String fileName, List<String> content) {
         try {
-            ArrayList<String> arrayList = readList(context,fileName);
-            arrayList.add(typename);
-            String filePath = context.getFilesDir().getAbsolutePath()+File.separator+fileName;
-            File writeName = new File(filePath);
-            writeName.createNewFile();
-            try (FileWriter writer = new FileWriter(writeName);
-                 BufferedWriter out = new BufferedWriter(writer)
-            ) {
-                for (String string:arrayList){
-                    out.write(string.toUpperCase()+"\r\n");
+            String filePath = context.getFilesDir().getAbsolutePath() + File.separator + fileName;
+            try (BufferedWriter out = new BufferedWriter(new FileWriter(filePath))) {
+                for (String string : content) {
+                    out.write(string.toUpperCase() + "\r\n");
                 }
                 out.flush();
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-
-
     }
 }
