@@ -682,6 +682,7 @@ import android.os.Parcelable;
 
 import java.io.File;
 import java.net.URI;
+import java.util.Objects;
 
 public class TemplatePD implements Parcelable {
     public static final String FILE_IMAGE_COORDINATES = "imageCoordinates.json";
@@ -700,13 +701,13 @@ public class TemplatePD implements Parcelable {
     private final File location;
 
     public TemplatePD(File location) {
+        this.location = Objects.requireNonNull(location, "location must not be null.");
         this.name = location.getName();
-        this.location = location;
     }
 
     protected TemplatePD(Parcel in) {
-        name = in.readString();
-        location = new File(URI.create(in.readString()));
+        name = Objects.requireNonNull(in.readString(), "in.readString() must not be null.");
+        location = new File(URI.create(Objects.requireNonNull(in.readString(), "in.readString() must not be null.")));
     }
 
     @Override
@@ -730,5 +731,26 @@ public class TemplatePD implements Parcelable {
 
     public File getImageCoordinatesFile() {
         return new File(location, FILE_IMAGE_COORDINATES);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        TemplatePD that = (TemplatePD) o;
+        return name.equals(that.name) && location.equals(that.location);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, location);
+    }
+
+    @Override
+    public String toString() {
+        return "TemplatePD{" +
+                "name='" + name + '\'' +
+                ", location=" + location +
+                '}';
     }
 }
