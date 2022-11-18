@@ -759,7 +759,7 @@ public class MainActivity extends Activity {
             SharedPreferences preferences = getPreferences(Context.MODE_PRIVATE);
             // Default forces an update: App already run but in a version that didn't had this logic.
             int lastVersion = preferences.getInt(PREFERENCE_LAST_START_VERSION, BuildConfig.VERSION_CODE - 1);
-            if (lastVersion < BuildConfig.VERSION_CODE) {
+            if (lastVersion < 4) {
                 // For now only one possible increment from <4 to 4
                 Log.i(TAG, "setup: Start patching from old version to " + BuildConfig.VERSION_CODE);
                 patchToVersion4();
