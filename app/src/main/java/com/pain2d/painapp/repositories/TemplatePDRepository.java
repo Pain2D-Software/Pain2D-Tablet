@@ -781,7 +781,12 @@ public class TemplatePDRepository {
             if (!importJson(uri, res)) {
                 return null;
             }
-        } else if (!importZip(uri, res)) {
+        } else if (extension.equalsIgnoreCase("zip")) {
+            if (!importZip(uri, res)) {
+                return null;
+            }
+        } else {
+            Log.e(TAG, "importTemplatePD: Unexpected file type: " + extension);
             return null;
         }
         templatePDs.put(name, res);
