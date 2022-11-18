@@ -682,6 +682,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
@@ -906,30 +907,7 @@ public class MainActivity extends Activity {
         infoview.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Toast.makeText(getApplicationContext(),
-                        "# Pain2D-Tablet is part of Pain2D-Software package\n" +
-                                "#\n" +
-                                "# Filename is part of Pain2D-Designer: you can redistribute it and/or modify\n" +
-                                "# it under the terms of the GNU General Public License as published by\n" +
-                                "# the Free Software Foundation, either version 3 of the License, or\n" +
-                                "# (at your option) any later version.\n" +
-                                "#\n" +
-                                "# Filename is distributed in the hope that it will be useful,\n" +
-                                "# but WITHOUT ANY WARRANTY; without even the implied warranty of\n" +
-                                "# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the\n" +
-                                "# GNU General Public License for more details.\n" +
-                                "#\n" +
-                                "# You should have received a copy of the GNU General Public License\n" +
-                                "# along with Filename  If not, see <http://www.gnu.org/licenses/>.\n" +
-                                "#\n" +
-                                "###################################################################\n" +
-                                "#\n" +
-                                "#@author Wenfeng Zhu\n" +
-                                "\n" +
-                                "# @author Nefissa Khedher\n" +
-                                "\n" +
-                                "# @author Jonas Eckert\n" +
-                                "###################################################################", Toast.LENGTH_LONG).show();
+                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.pain2d.com/")));
             }
         });
 

@@ -1,11 +1,12 @@
 # 1.0.4 (4)
 
-- Translate pain types to english and add five more:
+- Translate pain types to english and add five more (Jonas Eckert):
   - tingling
   - warm
   - fullness
   - soreness
   - pressure
+- Open home page when pressing info button (Jonas Eckert)
 
 
 # pre 1.0.3
