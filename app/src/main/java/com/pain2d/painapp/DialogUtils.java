@@ -701,7 +701,12 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
+import androidx.core.util.Consumer;
+
+import com.pain2d.painapp.model.TemplatePD;
 
 import java.util.Locale;
 import java.util.Map;
@@ -712,10 +717,14 @@ import java.util.Map;
 public class DialogUtils {
 
 
-    public interface DialogConfirm{
+    public interface DialogConfirm {
         void onConfirmClick();
     }
 
+    /**
+     * No need to save Toast globally (or set gravity)
+     */
+    @Deprecated
     private Toast toast;
 
 
@@ -726,14 +735,14 @@ public class DialogUtils {
     private static int color;
     private ColorPickerActivity colorPickerActivity;
 
-    protected void tipsDialog(Context context, String msg){
+    protected void tipsDialog(Context context, String msg) {
 
         LayoutInflater inflater = LayoutInflater.from(context);
-        View v = inflater.inflate(R.layout.dialog_tips,null );
+        View v = inflater.inflate(R.layout.dialog_tips, null);
         TextView tipTextView = v.findViewById(R.id.tips_textview);
         tipTextView.setText(msg);
 
-         Dialog tipsDialog = new Dialog(context, R.style.MyDialogStyle);
+        Dialog tipsDialog = new Dialog(context, R.style.MyDialogStyle);
         tipsDialog.setContentView(R.layout.dialog_tips);
         tipsDialog.setCancelable(true);
         tipsDialog.setCanceledOnTouchOutside(true);
@@ -751,14 +760,22 @@ public class DialogUtils {
         tipsDialog.show();
     }
 
-    protected void savePasswordDialog(final Context context, final Map<String, Bitmap> map, final float proportion, final String filePath, String fileNum){
+    protected void savePasswordDialog(@NonNull final Context context,
+                                      @NonNull final Map<String, Bitmap> map,
+                                      @NonNull final TemplatePD templatePD, final float proportion,
+                                      @NonNull final String filePath,
+                                      @Nullable String patientName,
+                                      @Nullable Consumer<String> onNewPatientName) {
 
         Log.i("filePath", filePath);
+        if (patientName != null) {
+            save(context, map, templatePD, proportion, filePath, patientName);
+            return;
+        }
 
-        final RWList RWList = new RWList();
 
         LayoutInflater inflater = LayoutInflater.from(context);
-        View v = inflater.inflate(R.layout.dialog_password_save,null );
+        View v = inflater.inflate(R.layout.dialog_password_save, null);
 
         final Dialog saveDialog = new Dialog(context, R.style.MyDialogStyle);
         saveDialog.setContentView(R.layout.dialog_password_save);
@@ -779,9 +796,6 @@ public class DialogUtils {
 
         final EditText patientID = v.findViewById(R.id.editTextNumberSigned);
 
-
-        patientID.setText(fileNum);
-
         Button cancel = v.findViewById(R.id.save_cancel);
         cancel.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -794,36 +808,42 @@ public class DialogUtils {
             @RequiresApi(api = Build.VERSION_CODES.KITKAT)
             @Override
             public void onClick(View v) {
-                if (!patientID.getText().toString().isEmpty()) {
-
-                    SaveJson saveJson = new SaveJson();
-
-                    saveJson.exportJson(map, proportion, filePath, patientID.getText().toString());
-                    saveDialog.dismiss();
-                    toast = Toast.makeText(saveDialog.getContext(), "File saved successfully", Toast.LENGTH_SHORT);
-                    toast.setGravity(Gravity.CENTER, 0, 0);
-                    toast.show();
-
-                    if (Container.isFromFilesList) {
-
+                final String newId = patientID.getText().toString();
+                if (newId.isEmpty()) {
+                    Toast.makeText(saveDialog.getContext(), "No patient id supplied",
+                            Toast.LENGTH_SHORT).show();
+                } else if (save(context, map, templatePD, proportion, filePath, newId)) {
+                    if (onNewPatientName != null) {
+                        onNewPatientName.accept(newId);
                     }
-
-                } else {
-                    toast = Toast.makeText(saveDialog.getContext(), "No patient id supplied", Toast.LENGTH_SHORT);
-                    toast.setGravity(Gravity.CENTER,0,0);
-                    toast.show();
+                    saveDialog.dismiss();
                 }
-
             }
         });
     }
 
-    protected void addPasswordDialog(final Context context){
+    private boolean save(@NonNull Context context, @NonNull Map<String, Bitmap> map,
+                      @NonNull TemplatePD templatePD, float proportion,
+                      @NonNull String filePath, @NonNull String patientID) {
+        if (SaveJson.exportJson(context.getApplicationContext(), map, templatePD,
+                proportion, filePath, patientID)) {
+            Toast.makeText(context, "File saved successfully",
+                    Toast.LENGTH_SHORT).show();
+
+            return true;
+        } else {
+            Toast.makeText(context, "Something went wrong. Please try again.",
+                    Toast.LENGTH_SHORT).show();
+            return false;
+        }
+    }
+
+    protected void addPasswordDialog(final Context context) {
 
         final RWList RWList = new RWList();
 
         LayoutInflater inflater = LayoutInflater.from(context);
-        final View v = inflater.inflate(R.layout.dialog_password_add,null );
+        final View v = inflater.inflate(R.layout.dialog_password_add, null);
 
         final Dialog addDialog = new Dialog(context, R.style.MyDialogStyle);
         addDialog.setContentView(R.layout.dialog_password_add);
@@ -857,40 +877,38 @@ public class DialogUtils {
             @RequiresApi(api = Build.VERSION_CODES.KITKAT)
             @Override
             public void onClick(View v) {
-                if (!typeName.getText().toString().isEmpty() && chooseColor != null){
-                    Log.e("BETA","I'm trying to confirm the new Pain");
+                if (!typeName.getText().toString().isEmpty() && chooseColor != null) {
+                    Log.e("BETA", "I'm trying to confirm the new Pain");
 
-                    RWList.writeList(context,typeName.getText().toString(),"typeList.txt");
-                    RWList.writeList(context,chooseColor,"colorList.txt");
+                    RWList.writeList(context, typeName.getText().toString(), "typeList.txt");
+                    RWList.writeList(context, chooseColor, "colorList.txt");
                     addDialog.dismiss();
                     toast = Toast.makeText(addDialog.getContext(), "Add Successfully!", Toast.LENGTH_SHORT);
-                    toast.setGravity(Gravity.CENTER,0,0);
+                    toast.setGravity(Gravity.CENTER, 0, 0);
                     toast.show();
-                    Intent intent = new Intent(context,PainTypeActivity.class);
+                    Intent intent = new Intent(context, PainTypeActivity.class);
                     context.startActivity(intent);
-                    Activity activity = (Activity)context;
-                    PainTypeActivity painTypeActivity = (PainTypeActivity)context;
+                    Activity activity = (Activity) context;
+                    PainTypeActivity painTypeActivity = (PainTypeActivity) context;
                     painTypeActivity.invalidateData();
                     activity.finish();
 
 
-                }
-                else if (chooseColor == null){
+                } else if (chooseColor == null) {
                     toast = Toast.makeText(addDialog.getContext(), "Please choose color!", Toast.LENGTH_SHORT);
-                    toast.setGravity(Gravity.CENTER,0,0);
+                    toast.setGravity(Gravity.CENTER, 0, 0);
                     toast.show();
-                }
-                else {
+                } else {
                     toast = Toast.makeText(addDialog.getContext(), "Type Name cannot be empty!", Toast.LENGTH_SHORT);
-                    toast.setGravity(Gravity.CENTER,0,0);
+                    toast.setGravity(Gravity.CENTER, 0, 0);
                     toast.show();
                 }
 
             }
         });
-        Button displaycolor = (Button)v.findViewById(R.id.color);
+        Button displaycolor = (Button) v.findViewById(R.id.color);
 
-        Button colorHex = (Button)v.findViewById(R.id.colorHex);
+        Button colorHex = (Button) v.findViewById(R.id.colorHex);
         colorPickerActivity = new ColorPickerActivity(context);
         colorHex.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -918,7 +936,7 @@ public class DialogUtils {
         });
     }
 
-    private String colorHex(int color){
+    private String colorHex(int color) {
         int a = Color.alpha(color);
         int r = Color.red(color);
         int g = Color.green(color);

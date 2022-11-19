@@ -680,20 +680,17 @@ package com.pain2d.painapp;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.provider.OpenableColumns;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
-import android.webkit.MimeTypeMap;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -708,6 +705,9 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 
 
+import com.pain2d.painapp.model.TemplatePD;
+import com.pain2d.painapp.repositories.TemplatePDRepository;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -717,6 +717,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -735,7 +736,6 @@ public class PainTypeActivity extends AppCompatActivity {
     private Handler handler = new Handler();
 
 
-    private ArrayList<String> typeListFinal = new ArrayList<String>();
     private ArrayList<Spinner> spinners = new ArrayList<Spinner>();
     private ArrayList<String> colrList = new ArrayList<String>();
 
@@ -744,7 +744,7 @@ public class PainTypeActivity extends AppCompatActivity {
     @Override
     protected void onPostResume() {
         super.onPostResume();
-        Log.e("BETA","Hi, I'm resumed");
+        Log.e("BETA", "Hi, I'm resumed");
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -754,7 +754,7 @@ public class PainTypeActivity extends AppCompatActivity {
         super.onCreate(saveInstanceState);
         setContentView(R.layout.activity_paintype);
 
-        Animation animation = AnimationUtils.loadAnimation(context,R.anim.alpha);
+        Animation animation = AnimationUtils.loadAnimation(context, R.anim.alpha);
 
 
         colrList = Container.colorList;
@@ -765,11 +765,8 @@ public class PainTypeActivity extends AppCompatActivity {
             map.put(typeList.get(i), Color.parseColor(color));
         }
 
-      //  typeList.add("Paintype1");
-     //   typeList.add("Paintype2");
-
-
-
+        //  typeList.add("Paintype1");
+        //   typeList.add("Paintype2");
 
 
         arrayAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, typeList);
@@ -796,7 +793,7 @@ public class PainTypeActivity extends AppCompatActivity {
         spinners.add(spinner_1);
 
 
-     /*   *//*ImageButton addButton = (ImageButton) findViewById(R.id.button_add);
+        /*   *//*ImageButton addButton = (ImageButton) findViewById(R.id.button_add);
         addButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -827,10 +824,9 @@ public class PainTypeActivity extends AppCompatActivity {
         });
 
 
-
         final RWList RWList = new RWList();
         final DialogUtils dialogUtils = new DialogUtils();
-        ImageButton button_newType = (ImageButton)findViewById(R.id.button_newType);
+        ImageButton button_newType = (ImageButton) findViewById(R.id.button_newType);
         button_newType.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -844,7 +840,7 @@ public class PainTypeActivity extends AppCompatActivity {
         button_back.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
-             button_back.startAnimation(animation);
+                button_back.startAnimation(animation);
                 Intent intent = new Intent(PainTypeActivity.this, MainActivity.class);
                 startActivity(intent);
             }
@@ -857,7 +853,7 @@ public class PainTypeActivity extends AppCompatActivity {
             public void onClick(View v) {
                 button_next.startAnimation(animation);
                 Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType(MimeTypeMap.getSingleton().getMimeTypeFromExtension("json"));
+                intent.setType("*/*");
                 startActivityForResult(intent, PICKFILE_REQUEST_CODE);
 
             }
@@ -867,13 +863,44 @@ public class PainTypeActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if(requestCode==PICKFILE_REQUEST_CODE){
-            importFile(data.getData());
-            Log.e("BETA","I'm back here");
+        if (requestCode == PICKFILE_REQUEST_CODE) {
+            if (data != null) {
+                final TemplatePD templatePD = TemplatePDRepository.getInstance(getApplicationContext())
+                        .importTemplatePD(data.getData());
+                if (templatePD == null) {
+                    Toast.makeText(this, "Something went wrong. Please select a " +
+                                    "valid zip file (or json if zip is not available).",
+                            Toast.LENGTH_SHORT).show();
+                } else {
+                    // template is now available
+                    final Set<String> uniqueSelectedPainTypes = new HashSet<>();
+                    final List<String> selectedPainTypes = new ArrayList<>(spinners.size());
+                    for (Spinner spinner : spinners) {
+                        selectedPainTypes.add(spinner.getSelectedItem().toString());
+                        uniqueSelectedPainTypes.add(spinner.getSelectedItem().toString());
+                    }
+                    if (selectedPainTypes.size() != uniqueSelectedPainTypes.size()) {
+                        Toast.makeText(context, "Please select a pain type only once.",
+                                Toast.LENGTH_LONG).show();
+                        selectedPainTypes.clear();
+                    } else {
+                        Intent intent = new Intent(PainTypeActivity.this, DrawActivity.class);
+                        final HashMap<String, Integer> mapFinal = new HashMap<String, Integer>();
+                        for (String string : selectedPainTypes) {
+                            mapFinal.put(string, map.get(string));
+                        }
+                        intent.putExtra(DrawActivity.ARGUMENT_PAIN_TO_COLOR_MAP, mapFinal);
+                        intent.putExtra(DrawActivity.ARGUMENT_TEMPLATE_PD, templatePD);
+
+                        //intent.putStringArrayListExtra("typeList",typeListFinal);
+                        startActivity(intent);
+                    }
+                }
+            }
         }
     }
 
-
+    @Deprecated
     public static File getTempFile(Context context, String fileName) {
 
         File path = new File(context.getFilesDir(), "jsonfiles/temps");
@@ -881,142 +908,6 @@ public class PainTypeActivity extends AppCompatActivity {
         String newFileName = fileName != null ? fileName : "name";
 
         return new File(path, newFileName + ".json");
-    }
-
-    public void importFile(Uri uri) {
-        String fileName = getFileName(uri);
-
-        Log.i("FileName",fileName);
-        // The temp file could be whatever you want
-        File tempFile = getTempFile(getApplicationContext(), null);
-
-        try {
-            File fileCopy = copyToTempFile(uri,tempFile);
-            Log.i("FileCopy",fileCopy.toString());
-
-
-                Set set = new HashSet();
-                for (Spinner spinner : spinners) {
-                    typeListFinal.add(spinner.getSelectedItem().toString());
-                    set.add(spinner.getSelectedItem().toString());
-                }
-                if (typeListFinal.size() != set.size()) {
-                    Toast toast = Toast.makeText(context, "The selected type has duplicates!", Toast.LENGTH_SHORT);
-                    toast.setGravity(Gravity.CENTER, 0, 0);
-                    toast.show();
-                    typeListFinal.clear();
-                    set.clear();
-                } else {
-                    Intent intent = new Intent(PainTypeActivity.this, DrawActivity.class);
-                    Map<String, Integer> mapFinal = new HashMap<String, Integer>();
-                    for (String string : typeListFinal) {
-                        mapFinal.put(string, map.get(string));
-                    }
-
-
-                    intent.putExtra("map", (Serializable) mapFinal);
-
-                    //intent.putStringArrayListExtra("typeList",typeListFinal);
-                    startActivity(intent);
-                }
-
-
-        } catch (IOException e) {
-            e.printStackTrace();
-
-        }
-
-        // Done!
-    }
-    private String getFileName(Uri uri) throws IllegalArgumentException {
-        // Obtain a cursor with information regarding this uri
-        Cursor cursor = getContentResolver().query(uri, null, null, null, null);
-
-        if (cursor.getCount() <= 0) {
-            cursor.close();
-            throw new IllegalArgumentException("Can't obtain file name, cursor is empty");
-        }
-
-        cursor.moveToFirst();
-
-        String fileName = cursor.getString(cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME));
-
-        cursor.close();
-
-        return fileName;
-    }
-
-    private File copyToTempFile(Uri uri, File tempFile) throws IOException {
-        // Obtain an input stream from the uri
-        InputStream inputStream = getContentResolver().openInputStream(uri);
-
-        if (inputStream == null) {
-            throw new IOException("Unable to obtain input stream from URI");
-        }
-
-        // Copy the stream to the temp file
-       copyInputStreamToFile(inputStream, tempFile);
-
-
-        return tempFile;
-    }
-
-
-    public static void copyInputStreamToFile(InputStream source, File destination) throws IOException {
-        try {
-            FileOutputStream output = openOutputStream(destination, false);
-            try {
-                copy(source, output);
-                output.close(); // don't swallow close Exception if copy completes normally
-            } finally {
-               // IOUtils.closeQuietly(output);
-            }
-        } finally {
-           // IOUtils.closeQuietly(source);
-        }
-    }
-
-    public static FileOutputStream openOutputStream(File file, boolean append) throws IOException {
-        if (file.exists()) {
-            if (file.isDirectory()) {
-                throw new IOException("File '" + file + "' exists but is a directory");
-            }
-            if (file.canWrite() == false) {
-                throw new IOException("File '" + file + "' cannot be written to");
-            }
-        } else {
-            File parent = file.getParentFile();
-            if (parent != null) {
-                if (!parent.mkdirs() && !parent.isDirectory()) {
-                    throw new IOException("Directory '" + parent + "' could not be created");
-                }
-            }
-        }
-        return new FileOutputStream(file, append);
-    }
-
-    public static int copy(InputStream input, OutputStream output) throws IOException {
-        long count = copyLarge(input, output);
-        if (count > Integer.MAX_VALUE) {
-            return -1;
-        }
-        return (int) count;
-    }
-
-    public static long copyLarge(InputStream input, OutputStream output)
-            throws IOException {
-        return copyLarge(input, output, new byte[1024 * 4]);
-    }
-
-    public static long copyLarge(InputStream input, OutputStream output, byte[] buffer)
-            throws IOException {
-        long count = 0;
-        int n = 0;
-        while (-1 != (n = input.read(buffer))) {
-            output.write(buffer, 0, n);
-            count += n;
-        }
-        return count;
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
@@ -1092,8 +983,8 @@ public class PainTypeActivity extends AppCompatActivity {
         typeList.clear();
 
         RWList rwList = new RWList();
-        Container.colorList= rwList.readList(context,"colorList.txt");
-        Container.typeList = rwList.readList(context,"typeList.txt");
+        Container.colorList = rwList.readList(context, "colorList.txt");
+        Container.typeList = rwList.readList(context, "typeList.txt");
 
         colrList = Container.colorList;
         typeList = Container.typeList;

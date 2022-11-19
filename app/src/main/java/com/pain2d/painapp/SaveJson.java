@@ -679,85 +679,78 @@ package com.pain2d.painapp;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+
+import com.pain2d.painapp.model.TemplatePD;
+import com.pain2d.painapp.repositories.TemplatePDRepository;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class SaveJson {
-    private static Context context;
-    private Bitmap bitmap;
+    private static final String TAG = SaveJson.class.getSimpleName();
 
-    private Map<String, ArrayList<Integer>> map = new HashMap<String, ArrayList<Integer>>();
-    private ArrayList<Integer> array_X = new ArrayList<Integer>();
-    private ArrayList<Integer> array_Y = new ArrayList<Integer>();
-
-
-    public SaveJson() {
+    private SaveJson() {
+        //no instance
     }
 
-    public void exportJson(Map<String, Bitmap> map, float proportion, String filePath, String fileNum) {
+    public static boolean exportJson(Context applocationContext, Map<String, Bitmap> map, TemplatePD templatePD, float proportion, String filePath, String fileNum) {
+        List<Integer> array_X = new ArrayList<>();
+        List<Integer> array_Y = new ArrayList<>();
 
-        for (String string : map.keySet()) {
+        final TemplatePDRepository templatePDRepository = TemplatePDRepository.getInstance(applocationContext);
 
+        boolean success = true;
+        List<File> files = new ArrayList<>(map.size());
 
-            String fileName = "Patient" + "_" + fileNum + "_" + string;
-
+        for (Map.Entry<String, Bitmap> e : map.entrySet()) {
+            String fileName = "Patient" + "_" + fileNum + "_" + e.getKey();
+            final Bitmap bitmap = e.getValue();
             for (int i = 0; i < Math.round(827 * proportion); i++) {
                 for (int j = 0; j < Math.round(1169 * proportion); j++) {
-
-                    if (map.get(string).getPixel(i, j) != 0) {
+                    if (bitmap.getPixel(i, j) != 0) {
                         array_X.add(Math.round(i / proportion));
                         array_Y.add(1169 - Math.round(j / proportion));
                     }
                 }
             }
-            ArrayList<Integer> array_All = (ArrayList<Integer>) array_X.clone();
+            List<Integer> array_All = new ArrayList<>(array_X.size() + array_Y.size());
+            array_All.addAll(array_X);
             array_All.addAll(array_Y);
             array_X.clear();
             array_Y.clear();
-            createJsonFile(array_All, filePath, fileName);
+            final File targetFile = new File(filePath + File.separator + fileName + ".json");
+            files.add(targetFile);
+            success &= createJsonFile(array_All, targetFile);
         }
+        success &= templatePDRepository.linkTemplates(templatePD, files);
+        return success;
     }
 
-    public static boolean createJsonFile(ArrayList<Integer> array_all, String filePath, String fileName) {
-
-        boolean flag = true;
-        String jsonString;
-
-        String fullPath = filePath + File.separator + fileName + ".json";
-
-        try {
-
-            File file = new File(fullPath);
-            if (!file.getParentFile().exists()) {
-                file.getParentFile().mkdirs();
+    private static boolean createJsonFile(@NonNull List<Integer> array_all, @NonNull File file) {
+        final File parentFile = file.getParentFile();
+        if (parentFile != null && !parentFile.exists()) {
+            if (!parentFile.mkdirs()) {
+                Log.e(TAG, "createJsonFile: Failed to create parent directory while saving pain drawing " + file);
             }
-            if (file.exists()) {
-                file.delete();
-            }
-            file.createNewFile();
-
-            jsonString = SaveJson.formatJson(array_all);
-
-            Writer write = new OutputStreamWriter(new FileOutputStream(file), "UTF-8");
-
-            write.write(jsonString);
-            write.flush();
-            write.close();
+        }
+        try (Writer write = new OutputStreamWriter(new FileOutputStream(file), "UTF-8");) {
+            write.write(SaveJson.formatJson(array_all));
         } catch (Exception e) {
-            flag = false;
-            e.printStackTrace();
+            Log.e(TAG, "createJsonFile: Failed to write " + file, e);
+            return false;
         }
-
-        return flag;
+        return true;
     }
 
-    public static String formatJson(ArrayList<Integer> array_all) {
+    public static String formatJson(List<Integer> array_all) {
         StringBuilder stringBuilder = new StringBuilder("[");
         for (int i = 0; i < array_all.size() - 1; i++) {
             stringBuilder.append(array_all.get(i));

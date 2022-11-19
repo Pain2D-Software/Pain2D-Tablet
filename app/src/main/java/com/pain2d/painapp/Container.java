@@ -679,13 +679,12 @@ package com.pain2d.painapp;
 
 import java.util.ArrayList;
 
-//Used to store cross-activity variables
-
+//It was "Used to store cross-activity variables" but for this purpose arguments on intents are used
+@Deprecated
 public class Container {
 
     public static ArrayList<String> colorList = new ArrayList<String>();
     public static ArrayList<String> typeList= new ArrayList<String>();
-    public static String filePath;
     public static boolean ifImport = false;
     public static int typeColor;
     public static String typeName;

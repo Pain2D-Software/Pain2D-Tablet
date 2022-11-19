@@ -920,6 +920,8 @@ public class MainActivity extends Activity {
         bt1.setOnClickListener(new Button.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Container.ifDisplay = false;
+                Container.ifRedraw = false;
                 Intent intent = new Intent(MainActivity.this, PainTypeActivity.class);
                 startActivity(intent);
             }
@@ -974,33 +976,10 @@ public class MainActivity extends Activity {
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this, FileSelectActivity.class);
                 startActivity(intent);
-                Container.ifRedraw = true;
                 Container.ifDisplay = false;
+                Container.ifRedraw = true;
             }
         });
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        //Get data from the new interface
-        String filePath = data.getStringExtra("filePath");
-        Container.filePath = filePath;
-        if (RESULT_OK == resultCode) {
-            //Bundle bundle = null;
-            if (data != null && (data.getExtras()) != null) {
-                //   TextView textView = (TextView) findViewById(R.id.filePath);
-                //Show file path in Text View
-                //  textView.setText("The folder you choose is：" + "\n" + filePath);
-                //Determine the corresponding color according to the second half of the path string
-                String str = filePath;
-
-                Container.typeName = str.substring(filePath.lastIndexOf("_") + 1, filePath.length() - 5);
-                Container.typeColor = Color.parseColor(Container.colorList.get(Container.typeList.indexOf(Container.typeName)));
-
-                Container.ifImport = true;
-            }
-        }
     }
 
     private static final class PainType {

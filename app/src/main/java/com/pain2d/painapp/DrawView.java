@@ -829,7 +829,6 @@ public class DrawView extends View {
         this.importBackGround();
         this.importNegative();
         this.negativeReserve();
-        this.importImage();
     }
 
     public Paint getmEraserPaint() {
@@ -950,10 +949,13 @@ public class DrawView extends View {
             Log.e(TAG, "importBackGround: failed to read HBO");
             return; // TODO: 19.11.22 there is no recovery mechanism so it may crash later at not so predictable positions.
         }
-        // TODO: 19.11.22 assert array length
         final int[] xValues = data[0];
         final int[] yValues = data[1];
-        hBitmap = Bitmap.createBitmap(827, 1169, Bitmap.Config.ARGB_8888);
+        if (hBitmap == null) {
+            hBitmap = Bitmap.createBitmap(827, 1169, Bitmap.Config.ARGB_8888);
+        } else {
+            hBitmap.eraseColor(0);
+        }
         for (int i = 0; i < xValues.length; i++) {
             hBitmap.setPixel((xValues[i]), (1169 - yValues[i]), Color.BLACK);
         }
@@ -961,8 +963,12 @@ public class DrawView extends View {
 
     private void importNegative() {
         final File negativeCoordinatesFile = templatePD.getNegativeCoordinatesFile();
-        // TODO: 19.11.22 why is width 828 but for background and importImage only 827?
-        negativeBitmap = Bitmap.createBitmap(828, 1169, Bitmap.Config.ARGB_8888);
+        if (negativeBitmap == null) {
+            // TODO: 19.11.22 why is width 828 but for background and importImage only 827?
+            negativeBitmap = Bitmap.createBitmap(828, 1169, Bitmap.Config.ARGB_8888);
+        }else {
+            negativeBitmap.eraseColor(0);
+        }
         if (negativeCoordinatesFile == null) {
             Log.i(TAG, "importNegative: No mask available. Allow all pixels.");
             negativeBitmap.eraseColor(Color.RED);
@@ -973,7 +979,6 @@ public class DrawView extends View {
                 Log.e(TAG, "importNegative: Failed to read mask.");
                 return; // TODO: 19.11.22 there is no recovery mechanism so it may crash later at not so predictable positions.
             }
-            // TODO: 19.11.22 assert array length
             final int[] xValues = data[0];
             final int[] yValues = data[1];
             for (int i = 0; i < xValues.length; i++) {
@@ -982,22 +987,29 @@ public class DrawView extends View {
         }
     }
 
-    private void importImage() {
-        if (Container.ifImport) {
-            Log.d(TAG, "importImage: Import image: " + Container.filePath);
-            final int[][] data = readJsonImage(new File(Container.filePath));
-            if (data == null) {
-                Log.e(TAG, "importImage: Failed to read pain drawing.");
-                return; // TODO: 19.11.22 there is no recovery mechanism so it may crash later at not so predictable positions.
-            }
-            // TODO: 19.11.22 assert array length
-            final int[] xValues = data[0];
-            final int[] yValues = data[1];
-            cBitmap = Bitmap.createBitmap(Math.round(827 * proportion), Math.round(1169 * proportion), Bitmap.Config.ARGB_8888);
-            for (int i = 0; i < xValues.length; i++) {
-                cBitmap.setPixel(xValues[i], 1169 - yValues[i], Container.typeColor);
-            }
+    /**
+     * Import an existing drawing from a specific file.
+     * @param file the source of the drawing.
+     * @return {@code true} iff the image was loaded.
+     */
+    public boolean importImage(File file) {
+        Log.d(TAG, "importImage: Import image: " + file);
+        final int[][] data = readJsonImage(file);
+        if (data == null) {
+            Log.e(TAG, "importImage: Failed to read pain drawing.");
+            return false;
         }
+        final int[] xValues = data[0];
+        final int[] yValues = data[1];
+        if (cBitmap == null) {
+            cBitmap = Bitmap.createBitmap(Math.round(827 * proportion), Math.round(1169 * proportion), Bitmap.Config.ARGB_8888);
+        } else {
+            cBitmap.eraseColor(0);
+        }
+        for (int i = 0; i < xValues.length; i++) {
+            cBitmap.setPixel(xValues[i], 1169 - yValues[i], Container.typeColor);
+        }
+        return true;
     }
 
     private static Bitmap zoom(Bitmap bitmap, float proportion) {
@@ -1042,7 +1054,6 @@ public class DrawView extends View {
             pixel[i] = pixel[i] != Color.RED ? Color.WHITE : Color.TRANSPARENT;
         }
         negativeBitmap.setPixels(pixel, 0, width, 0, 0, width, height);
-        //nBitmap_reserve = Bitmap.createBitmap(nBitmap,0,0,1200,1800);
     }
 
     //called when user draw
@@ -1122,12 +1133,10 @@ public class DrawView extends View {
         if (num == 0) {
             return false;
         } else {
-
-            for (String string : PathCollection.keySet()) {
+            for (Map.Entry<String, ArrayList<Path>> e : PathCollection.entrySet()) {
+                final String string = e.getKey();
                 Canvas saveCanvas = new Canvas(saveBitmap);
-                if (PathCollection.get(string).isEmpty()) {
-
-                } else {
+                if (!e.getValue().isEmpty()) {
                     Bitmap emptyBitmap = Bitmap.createBitmap(saveBitmap.getWidth(), saveBitmap.getHeight(), Bitmap.Config.ARGB_8888);
 
                     if (string.equals("eraser")) {

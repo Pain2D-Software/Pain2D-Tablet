@@ -696,6 +696,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -729,7 +730,13 @@ public class TemplatePDRepository {
 
     private TemplatePDRepository(Context applicationContext) {
         this.applicationContext = applicationContext;
-        this.legacyTemplatePD = new TemplatePD(new File(applicationContext.getFilesDir(), "jsonfiles/temps/name.json"));
+        this.legacyTemplatePD = new TemplatePD(new File(applicationContext.getFilesDir(), "jsonfiles/temps/name.json")) {
+            @Nullable
+            @Override
+            public File getNegativeCoordinatesFile() {
+                return null;
+            }
+        };
         this.pdToTemplateMapping = applicationContext.getSharedPreferences(PD_TO_TEMPLATE_MAPPING, Context.MODE_PRIVATE);
         this.templateDirectory = new File(applicationContext.getFilesDir(), TEMPLATE_DIRECTORY);
         final File[] templates = templateDirectory.listFiles();
@@ -794,6 +801,7 @@ public class TemplatePDRepository {
     }
 
     private boolean importJson(Uri uri, TemplatePD templatePD) {
+        // TODO: 19.11.22 assert data
         try (final InputStream in = applicationContext.getContentResolver().openInputStream(uri);
              final OutputStream out = new FileOutputStream(templatePD.getImageCoordinatesFile())) {
             copy(in, out);
@@ -806,6 +814,7 @@ public class TemplatePDRepository {
     }
 
     private boolean importZip(Uri uri, TemplatePD templatePD) {
+        // TODO: 19.11.22 assert data
         try (final ZipInputStream in = new ZipInputStream(new BufferedInputStream(
                 applicationContext.getContentResolver().openInputStream(uri)))) {
             ZipEntry ze;
@@ -848,4 +857,18 @@ public class TemplatePDRepository {
         }
     }
 
+    public synchronized boolean linkTemplates(TemplatePD templatePD, List<File> targetFiles) {
+        final SharedPreferences.Editor edit = pdToTemplateMapping.edit();
+        for (File targetFile : targetFiles) {
+            edit.putString(targetFile.getName(), templatePD.getName());
+        }
+        return edit.commit();
+    }
+
+    public synchronized TemplatePD getTemplate(File file) {
+        final String templateName = pdToTemplateMapping.getString(file.getName(), null);
+        // returns null if null is passed
+        final TemplatePD template = templatePDs.get(templateName);
+        return template == null ? legacyTemplatePD : template;
+    }
 }

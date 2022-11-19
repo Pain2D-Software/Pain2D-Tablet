@@ -683,6 +683,8 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Path;
 import android.os.Bundle;
+import android.os.Parcelable;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -698,8 +700,13 @@ import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.pain2d.painapp.model.TemplatePD;
+
+import java.io.File;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -707,6 +714,21 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class DrawActivity extends AppCompatActivity {
+    private static final String TAG = DrawActivity.class.getSimpleName();
+    /**
+     * (optional) Mapping containing all pain types that are available for selection and the corresponding color.
+     */
+    public static final String ARGUMENT_PAIN_TO_COLOR_MAP = "map";
+    /**
+     * (required) A {@link TemplatePD} that defines which template should be used.
+     */
+    public static final String ARGUMENT_TEMPLATE_PD = "template_pain_drawing";
+    @Deprecated
+    public static final String ARGUMENT_FILE_NUMBER = "FILE_NUM";
+    /**
+     * (optional) If specified, it is a {@link java.io.File} referring to an old drawing that should be edited.
+     */
+    public static final String ARGUMENT_IMAGE_FILE = "image_file";
     private float proportion = Container.proportion;
     private int Pen = 1;
     private int Eraser = 2;
@@ -716,21 +738,14 @@ public class DrawActivity extends AppCompatActivity {
 
     private ScaleGestureDetector mScaleGestureDetector = null;
 
-    ImageButton button_move;
-    ImageButton button_undo;
-    ImageButton button_eraser;
-    Button bt2;
-
-    private String fileNum;
-
+    private ImageButton button_move;
+    private ImageButton button_undo;
+    private ImageButton button_eraser;
+    private Button bt2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        if (getIntent().getExtras() != null){
-            fileNum = getIntent().getExtras().getString("FILE_NUM");
-        }
 
         setContentView(R.layout.activity_draw);
         DialogUtils dialogUtils = new DialogUtils();
@@ -769,7 +784,7 @@ public class DrawActivity extends AppCompatActivity {
 
     }
 
-    private void setImageButtonColor(ImageButton button){
+    private void setImageButtonColor(ImageButton button) {
         if (button_move.equals(button)) {
             button_move.setBackgroundColor(getResources().getColor(R.color.bluelight));
             button_undo.setBackgroundColor(getResources().getColor(R.color.bluedark));
@@ -789,7 +804,7 @@ public class DrawActivity extends AppCompatActivity {
     }
 
 
-    private void setButtonColor(){
+    private void setButtonColor() {
         button_move.setBackgroundColor(getResources().getColor(R.color.bluedark));
         button_undo.setBackgroundColor(getResources().getColor(R.color.bluedark));
         button_eraser.setBackgroundColor(getResources().getColor(R.color.bluedark));
@@ -802,11 +817,14 @@ public class DrawActivity extends AppCompatActivity {
     private ScrollGestureListener scrollGestureListener;
     private GestureDetector gestureDetector;
 
+    @Nullable
+    private String patientId;
+
 
     @SuppressLint("ClickableViewAccessibility")
     private void init() {
         FrameLayout layout = (FrameLayout) findViewById(R.id.root);
-        Animation animation = AnimationUtils.loadAnimation(context,R.anim.alpha);
+        Animation animation = AnimationUtils.loadAnimation(context, R.anim.alpha);
 
         RelativeLayout.LayoutParams params = new RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         params.addRule(RelativeLayout.CENTER_IN_PARENT, RelativeLayout.TRUE);
@@ -814,13 +832,55 @@ public class DrawActivity extends AppCompatActivity {
 
         view.setLayoutParams(params);
 
+        // Handle argument ARGUMENT_TEMPLATE_PD
+        final TemplatePD templatePD;
+        {
+            final Parcelable parcelable = getIntent().getParcelableExtra(ARGUMENT_TEMPLATE_PD);
+            if (parcelable instanceof TemplatePD) {
+                templatePD = (TemplatePD) parcelable;
+            } else if (parcelable != null) {
+                throw new IllegalArgumentException("init: Unexpected argument type for argument "
+                        + ARGUMENT_TEMPLATE_PD + ". Expected " + TemplatePD.class.getName() + " got "
+                        + parcelable.getClass().getName());
+            } else {
+                throw new NullPointerException("init: Missing argument "
+                        + ARGUMENT_TEMPLATE_PD + " of type " + TemplatePD.class.getName() + ".");
+            }
+        }
+        view.setTemplate(templatePD);
+
+        // Handle argument ARGUMENT_IMAGE_FILE
+        {
+            final Serializable serializable = getIntent().getSerializableExtra(ARGUMENT_IMAGE_FILE);
+            if (serializable instanceof File) {
+                final File file = (File) serializable;
+                // TODO: 19.11.22 create a repository for saving drawings that manages the file name and therefore knows how to extract the patient id
+                // Currently it is between the first and second underscore
+                final String name = file.getName();
+                final int firstIndex = name.indexOf('_') + 1;
+                if (firstIndex > 0) {
+                    final int secondIndex = name.indexOf('_', firstIndex);
+                    if (secondIndex >= 0) {
+                        patientId = name.substring(firstIndex, secondIndex);
+                    }
+                }
+                view.importImage(file);
+            } else if (serializable != null) {
+                throw new IllegalArgumentException("init: Unexpected argument type for argument "
+                        + ARGUMENT_IMAGE_FILE + ". Expected " + File.class.getName() + " got "
+                        + serializable.getClass().getName());
+            } else {
+                Container.typeName = null; // This must be cleared when not editing so save mechanism in DrawView works. Remove the els case when removing Container
+            }
+        }
+
         if (Container.ifDisplay) {
             map = null;
         } else if (Container.ifRedraw) {
             map.put(Container.typeName, Container.typeColor);
             view.setMap(map);
         } else {
-            map = (Map<String, Integer>) this.getIntent().getSerializableExtra("map");
+            map = (Map<String, Integer>) this.getIntent().getSerializableExtra(ARGUMENT_PAIN_TO_COLOR_MAP);
             view.setMap(map);
         }
         view.invalidate();
@@ -831,7 +891,7 @@ public class DrawActivity extends AppCompatActivity {
 
 //        ImageButton button_legend = (ImageButton)findViewById(R.id.button_legend);
 
-        if (map != null){
+        if (map != null) {
 
             ArrayList<Button> buttonList = new ArrayList<Button>();
             final int num = map.size();
@@ -860,7 +920,7 @@ public class DrawActivity extends AppCompatActivity {
                             view.setMode(Pen);
                             view.pressed(true);
                             view.invalidate();
-                          //  button_legend.setBackgroundColor(map1.getValue());
+                            //  button_legend.setBackgroundColor(map1.getValue());
                             Container.move_action = true;
                         }
                         if (event.getAction() == MotionEvent.ACTION_UP) {
@@ -954,9 +1014,9 @@ public class DrawActivity extends AppCompatActivity {
             }
         });
 
-if( Container.ifDisplay){
+        if (Container.ifDisplay) {
 
-}
+        }
         ImageButton button_save = (ImageButton) findViewById(R.id.save);
         button_save.setOnClickListener(new Button.OnClickListener() {
             @Override
@@ -965,7 +1025,8 @@ if( Container.ifDisplay){
                 if (view.saveScreen()) {
                     DialogUtils saveDialog = new DialogUtils();
 //                    saveDialog.savePasswordDialog(context, view.getSbMap(), proportion, view.getContext().getFilesDir().getAbsolutePath());
-                    saveDialog.savePasswordDialog(context, view.getSbMap(), proportion, getExternalFilesDir("").getAbsolutePath(), fileNum);
+                    saveDialog.savePasswordDialog(context, view.getSbMap(), templatePD, proportion,
+                            getExternalFilesDir("").getAbsolutePath(), patientId, newID -> patientId = newID);
                 } else {
                     Toast toast = Toast.makeText(context, "There is nothing to save ~ (×_×) ~", Toast.LENGTH_SHORT);
                     toast.setGravity(Gravity.CENTER, 0, 0);
@@ -975,13 +1036,14 @@ if( Container.ifDisplay){
             }
         });
 
-        if( Container.ifDisplay){
+        if (Container.ifDisplay) {
             button_save.setVisibility(View.GONE);
 
         }
         ImageButton button_back = (ImageButton) findViewById(R.id.back);
         button_back.setOnClickListener(new Button.OnClickListener() {
             public void onClick(View v) {
+                // TODO: 19.11.22 ask if this is really what the user wants to da or at least, if he wants to save
                 button_back.startAnimation(animation);
                 Intent intent = new Intent(DrawActivity.this, MainActivity.class);
                 startActivity(intent);
@@ -991,7 +1053,6 @@ if( Container.ifDisplay){
             }
         });
     }
-
 
 
 }

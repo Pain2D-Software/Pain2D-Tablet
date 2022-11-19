@@ -677,7 +677,6 @@
 
 package com.pain2d.painapp;
 
-import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
@@ -692,6 +691,8 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.pain2d.painapp.repositories.TemplatePDRepository;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -699,21 +700,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class FileSelectActivity extends AppCompatActivity implements DialogUtils.DialogConfirm {
+public class FileSelectActivity extends AppCompatActivity {
 
-    ListView listview;
-    TextView textView;
-    File currentParent;
-    File[] currentFiles;
-    public static final int RESULT_OK = 1;
-
-    Context context = this;
-
-    private String fileNum;
+    private ListView listview;
+    private TextView textView;
+    private File currentParent;
+    private File[] currentFiles;
+    private TemplatePDRepository templatePDRepository;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        templatePDRepository = TemplatePDRepository.getInstance(getApplicationContext());
         setContentView(R.layout.activity_select);
 
 
@@ -730,41 +728,37 @@ public class FileSelectActivity extends AppCompatActivity implements DialogUtils
         listview.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                if (currentFiles[position].isFile()) {
+                final File currentFile = currentFiles[position];
+                if (currentFile.isFile()) {
 
-                    Log.i("FileName", currentFiles[position].getName());
+                    Log.i("FileName", currentFile.getName());
 
-                    fileNum =  currentFiles[position].getName().substring(8,10);
-
-                    String filePath = currentFiles[position].getPath();
+                    String filePath = currentFile.getPath();
                     String suffix = filePath.substring(filePath.length()-4);
                     if(suffix.equals("json")){
 
                         Container.ifImport = true;
-                        Container.filePath = filePath;
-
                         Container.typeName = filePath.substring(filePath.lastIndexOf("_")+1,filePath.length()-5);
                         Container.typeColor = Color.parseColor(Container.colorList.get(Container.typeList.indexOf(Container.typeName)));
 
                         Container.isFromFilesList = true;
 
-                        if(Container.isFromFilesList) { // This lock was inlined after removing password questions. It did the check so it is kept for not.
-                            Intent intent = new Intent(FileSelectActivity.this,DrawActivity.class);
-                            intent.putExtra("FILE_NUM", fileNum);
-                            startActivity(intent);
-                        }
+                        Intent intent = new Intent(FileSelectActivity.this,DrawActivity.class);
+                        intent.putExtra(DrawActivity.ARGUMENT_TEMPLATE_PD, templatePDRepository.getTemplate(currentFile));
+                        intent.putExtra(DrawActivity.ARGUMENT_IMAGE_FILE, currentFile);
+                        startActivity(intent);
                     }
                     else {
                         Toast.makeText(FileSelectActivity.this, "Please select a json file!", Toast.LENGTH_SHORT).show();
                     }
 
                 } else {
-                    File[] tmp = currentFiles[position].listFiles();
+                    File[] tmp = currentFile.listFiles();
                     if (tmp == null || tmp.length == 0) {
                         Toast.makeText(FileSelectActivity.this, "empty!", Toast.LENGTH_SHORT).show();
                     }//if
                     else {
-                        currentParent = currentFiles[position];
+                        currentParent = currentFile;
                         currentFiles = tmp;
                         inflateListView(currentFiles);
                     }
@@ -788,15 +782,14 @@ public class FileSelectActivity extends AppCompatActivity implements DialogUtils
             Toast.makeText(FileSelectActivity.this, "Folder is empty", Toast.LENGTH_SHORT).show();
         else {
 
-            List<Map<String, Object>> listItems = new ArrayList<Map<String, Object>>();
-            for (int i = 0; i < files.length; i++) {
-                Map<String, Object> listItem = new HashMap<String, Object>();
+            List<Map<String, Object>> listItems = new ArrayList<>();
+            for (File file : files) {
+                Map<String, Object> listItem = new HashMap<>();
 
-                if (files[i].isDirectory()) listItem.put("icon", R.drawable.icons_folder);//文件夹
+                if (file.isDirectory()) listItem.put("icon", R.drawable.icons_folder);//文件夹
                 else
                     listItem.put("icon", R.drawable.icons_file);//文件
-                listItem.put("fileName", files[i].getName());
-
+                listItem.put("fileName", file.getName());
 
 
                 listItems.add(listItem);
@@ -818,15 +811,6 @@ public class FileSelectActivity extends AppCompatActivity implements DialogUtils
         startActivity(intent);
 
     }
-
-
-    @Override
-    public void onConfirmClick() {
-        Intent intent = new Intent(FileSelectActivity.this, DrawActivity.class);
-        intent.putExtra("FILE_NUM", fileNum);
-        startActivity(intent);
-    }
-
 }
 
 

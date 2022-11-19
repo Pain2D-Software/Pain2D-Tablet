@@ -680,12 +680,17 @@ package com.pain2d.painapp.model;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import java.io.File;
+import java.io.Serializable;
 import java.net.URI;
 import java.util.Objects;
 
 public class TemplatePD implements Parcelable {
     public static final String FILE_IMAGE_COORDINATES = "imageCoordinates.json";
+    public static final String FILE_NEGATIVE_COORDINATES = "negativeCoordinates.json";
     public static final Creator<TemplatePD> CREATOR = new Creator<TemplatePD>() {
         @Override
         public TemplatePD createFromParcel(Parcel in) {
@@ -707,13 +712,17 @@ public class TemplatePD implements Parcelable {
 
     protected TemplatePD(Parcel in) {
         name = Objects.requireNonNull(in.readString(), "in.readString() must not be null.");
-        location = new File(URI.create(Objects.requireNonNull(in.readString(), "in.readString() must not be null.")));
+        final Serializable serializable = Objects.requireNonNull(in.readSerializable(), "in.readString() must not be null.");
+        if (!(serializable instanceof File)) {
+            throw new IllegalArgumentException("Expected second value to be a File but got " + serializable);
+        }
+        location = (File) serializable;
     }
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeString(name);
-        dest.writeString(location.toURI().toString());
+        dest.writeSerializable(location);
     }
 
     @Override
@@ -725,12 +734,20 @@ public class TemplatePD implements Parcelable {
         return name;
     }
 
+    @NonNull
     public File getLocation() {
         return location;
     }
 
+    @NonNull
     public File getImageCoordinatesFile() {
         return new File(location, FILE_IMAGE_COORDINATES);
+    }
+
+    @Nullable
+    public File getNegativeCoordinatesFile() {
+        final File res = new File(location, FILE_NEGATIVE_COORDINATES);
+        return res.exists() ? res : null;
     }
 
     @Override
