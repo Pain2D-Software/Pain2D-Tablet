@@ -888,7 +888,6 @@ public class DrawActivity extends AppCompatActivity {
                         + serializable);
             }
         } else {
-            Container.typeName = null; // This must be cleared when not editing so save mechanism in DrawView works. Remove the els case when removing Container
             if (intent.hasExtra(ARGUMENT_PAIN_TO_COLOR_MAP)) {
                 final Serializable serializable = intent.getSerializableExtra(ARGUMENT_PAIN_TO_COLOR_MAP);
                 if (serializable instanceof Map) {

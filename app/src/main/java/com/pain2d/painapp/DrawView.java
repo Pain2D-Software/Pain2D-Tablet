@@ -1159,7 +1159,7 @@ public class DrawView extends View {
                             if (emptyBitmap.sameAs(saveBitmap)) {
                                 return false;
                             } else {
-                                sbMap.put(Container.typeName, saveBitmap.copy(Bitmap.Config.ARGB_8888, true));
+                                sbMap.put(typeName, saveBitmap.copy(Bitmap.Config.ARGB_8888, true));
                                 clear(saveCanvas);
                             }
                         }

@@ -737,8 +737,8 @@ public class FileSelectActivity extends AppCompatActivity {
                     String suffix = filePath.substring(filePath.length()-4);
                     if(suffix.equals("json")){
 
-                        Container.typeName = filePath.substring(filePath.lastIndexOf("_")+1,filePath.length()-5);
-                        Container.typeColor = Color.parseColor(Container.colorList.get(Container.typeList.indexOf(Container.typeName)));
+                        final String typeName = filePath.substring(filePath.lastIndexOf("_")+1,filePath.length()-5);
+                        Container.typeColor = Color.parseColor(Container.colorList.get(Container.typeList.indexOf(typeName)));
 
                         Container.isFromFilesList = true;
 
