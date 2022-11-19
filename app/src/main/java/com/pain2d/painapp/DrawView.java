@@ -690,6 +690,11 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.pain2d.painapp.model.TemplatePD;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 
@@ -697,7 +702,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -708,7 +712,9 @@ import java.util.Map;
 //Drawing class to integrate functions in the drawing process
 
 public class DrawView extends View {
+    private static final String TAG = DrawView.class.getSimpleName();
     private float mX, mY;
+    private TemplatePD templatePD;
 
     public Map<String, Bitmap> getSbMap() {
         return sbMap;
@@ -720,30 +726,21 @@ public class DrawView extends View {
 
     private Map<String, Bitmap> sbMap;
 
-    private Integer[] x_array;
-    private Integer[] y_array;
-    private Integer[] x_array_import;
-    private Integer[] y_array_import;
-    private Integer[] x_array_negative;
-    private Integer[] y_array_negative;
-    StringBuilder strb = new StringBuilder();
-    StringBuilder strb_negativ = new StringBuilder();
-    StringBuilder strb_import = new StringBuilder();
-
     private Bitmap mBitmap;
     private Bitmap hBitmap;
     private Bitmap cBitmap;
-    private Bitmap nBitmap; // Bitmap for negative
+    private Bitmap negativeBitmap; // Bitmap for negative
     private Bitmap nBitmap_reserve;
     private Canvas mCanvas;
-    private Path mPath;
-    private Paint nBitmapPaint;
-    private Paint nBitmapreservePaint;
-    private Paint mBitmapPaint;
-    private Paint hBitmapPaint;
-    private Paint cBitmapPaint;
+    private final Path mPath;
+    // TODO: 19.11.22 is this ever used?
+    private final Paint nBitmapPaint;
+    // TODO: 19.11.22 is this ever used?
+    private final Paint nBitmapreservePaint;
+    private final Paint mBitmapPaint;
+    private final Paint hBitmapPaint;
+    private final Paint cBitmapPaint;
     private Paint mEraserPaint;
-    Context context;
     private Paint mPaint;
     private int paintColor = Color.BLACK;
 
@@ -787,14 +784,8 @@ public class DrawView extends View {
 
     public DrawView(Context context) {
         super(context);
-        this.context = context;
 
         sbMap = new HashMap<String, Bitmap>();
-
-        this.importBackGround();
-        this.importNegative();
-        this.negativ_reserve(nBitmap);
-
 
         mPath = new Path();
         mBitmapPaint = new Paint(Paint.DITHER_FLAG);
@@ -817,7 +808,7 @@ public class DrawView extends View {
 
         nBitmapPaint = new Paint(Paint.DITHER_FLAG);
         nBitmapPaint.setColor(Color.WHITE);
-        nBitmapreservePaint =new Paint(Paint.DITHER_FLAG);
+        nBitmapreservePaint = new Paint(Paint.DITHER_FLAG);
         nBitmapreservePaint.setColor(Color.TRANSPARENT);
 
         mPaint = new Paint();
@@ -830,7 +821,14 @@ public class DrawView extends View {
         mPaint.setStrokeJoin(Paint.Join.ROUND);
         mPaint.setStrokeCap(Paint.Cap.ROUND);
         mPaint.setStrokeWidth(10);
+    }
 
+    public void setTemplate(TemplatePD templatePD) {
+        Log.d(TAG, "setTemplate: Load images from template " + templatePD);
+        this.templatePD = templatePD;
+        this.importBackGround();
+        this.importNegative();
+        this.negativeReserve();
         this.importImage();
     }
 
@@ -908,116 +906,98 @@ public class DrawView extends View {
 
     }
 
-    protected void importBackGround() {
-        try {
-            //InputStream is = getResources().getAssets().open("original.json");
-            // TODO: 17.11.22 test
-            InputStream is = new FileInputStream(new File(context.getFilesDir(), "/jsonfiles/temps/name.json"));
-            //InputStream is = new FileInputStream(this.context.getFilesDir().getAbsolutePath()+"/patient001_druck.json");
-            InputStreamReader isr = new InputStreamReader(is, "UTF-8");
-            BufferedReader br = new BufferedReader(isr);
-            //isr = null;
-            String str = "";
+    @Nullable
+    private int[][] readJsonImage(@NonNull File file) {
+        final StringBuilder builder = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(
+                file), "UTF-8"));) {
+            String str;
             while ((str = br.readLine()) != null) {
-                strb.append(str);
+                builder.append(str);
             }
-            //br = null;
         } catch (IOException e) {
-            // TODO: 17.11.22 log
-            e.printStackTrace();
+            Log.e(TAG, "readJsonImage: failed to read " + file, e);
+            return null;
         }
 
+        final int[] xValues;
+        final int[] yValues;
         try {
-            JSONArray jsonArray = new JSONArray(strb.toString());
-            int num_background = jsonArray.length() / 2;
-            x_array = new Integer[num_background];
-            y_array = new Integer[num_background];
+            JSONArray jsonArray = new JSONArray(builder.toString());
+            final int length = jsonArray.length();
+            if ((length & 1) == 1) {
+                Log.e(TAG, "readJsonImage: Got an odd amount of values but expected a continuous sequence of y, y pairs.");
+                return null;
+            }
+            int num_background = length >> 1;
+            xValues = new int[num_background];
+            yValues = new int[num_background];
             for (int i = 0; i < num_background; i++) {
-                x_array[i] = jsonArray.getInt(i);
-                y_array[i] = jsonArray.getInt(num_background + i);
-
+                xValues[i] = jsonArray.getInt(i);
+                yValues[i] = jsonArray.getInt(num_background + i);
             }
         } catch (JSONException e) {
-            e.printStackTrace();
+            Log.e(TAG, "importBackGround: Failed to extract points", e);
+            return null;
         }
+        return new int[][]{xValues, yValues};
+    }
 
+    private void importBackGround() {
+        Log.d(TAG, "importBackGround: Import image: " + templatePD.getImageCoordinatesFile());
+        final int[][] data = readJsonImage(templatePD.getImageCoordinatesFile());
+        if (data == null) {
+            Log.e(TAG, "importBackGround: failed to read HBO");
+            return; // TODO: 19.11.22 there is no recovery mechanism so it may crash later at not so predictable positions.
+        }
+        // TODO: 19.11.22 assert array length
+        final int[] xValues = data[0];
+        final int[] yValues = data[1];
         hBitmap = Bitmap.createBitmap(827, 1169, Bitmap.Config.ARGB_8888);
-        for (int i = 0; i < x_array.length; i++) {
-            hBitmap.setPixel((x_array[i]), (1169 - y_array[i]), Color.BLACK);
+        for (int i = 0; i < xValues.length; i++) {
+            hBitmap.setPixel((xValues[i]), (1169 - yValues[i]), Color.BLACK);
         }
-
     }
 
-    protected void importNegative(){
-        try{
-            // TODO: 12.11.22 never closed
-            InputStream is = new FileInputStream(context.getFilesDir().getPath()+"/jsonfiles/temps/negativeCoordinates.json");
-            InputStreamReader isr = new InputStreamReader(is,"UTF-8");
-            BufferedReader br = new BufferedReader(isr);
-            String str = "";
-            while ((str = br.readLine()) != null){
-                strb_negativ.append(str);
+    private void importNegative() {
+        final File negativeCoordinatesFile = templatePD.getNegativeCoordinatesFile();
+        // TODO: 19.11.22 why is width 828 but for background and importImage only 827?
+        negativeBitmap = Bitmap.createBitmap(828, 1169, Bitmap.Config.ARGB_8888);
+        if (negativeCoordinatesFile == null) {
+            Log.i(TAG, "importNegative: No mask available. Allow all pixels.");
+            negativeBitmap.eraseColor(Color.RED);
+        } else {
+            Log.d(TAG, "importNegative: Import image: " + negativeCoordinatesFile);
+            final int[][] data = readJsonImage(negativeCoordinatesFile);
+            if (data == null) {
+                Log.e(TAG, "importNegative: Failed to read mask.");
+                return; // TODO: 19.11.22 there is no recovery mechanism so it may crash later at not so predictable positions.
             }
-        }catch (IOException e){
-            e.printStackTrace();
-        }
-
-        try {
-            JSONArray jsonArray = new JSONArray(strb_negativ.toString());
-            int num_negative = jsonArray.length() / 2;
-            x_array_negative = new Integer[num_negative];
-            y_array_negative = new Integer[num_negative];
-            for (int i = 0; i < num_negative; i++){
-                x_array_negative[i] = jsonArray.getInt(i);
-                y_array_negative[i] = jsonArray.getInt(num_negative + i);
+            // TODO: 19.11.22 assert array length
+            final int[] xValues = data[0];
+            final int[] yValues = data[1];
+            for (int i = 0; i < xValues.length; i++) {
+                negativeBitmap.setPixel((xValues[i]), (1169 - yValues[i]), Color.RED);
             }
-        }catch (JSONException e){
-            e.printStackTrace();
         }
-        nBitmap = Bitmap.createBitmap(828,1169,Bitmap.Config.ARGB_8888);
-        for (int i = 0; i < x_array_negative.length; i++){
-            nBitmap.setPixel((x_array_negative[i]),(1169-y_array_negative[i]),Color.RED);
-        }
-        /*nBitmap = Bitmap.createBitmap(1200,1800,Bitmap.Config.ARGB_8888);
-        for (int i = 0; i < x_array_negative.length; i++){
-            nBitmap.setPixel((x_array_negative[i]),(1200-y_array_negative[i]),Color.RED);
-        }*/
     }
 
-    protected void importImage() {
-
+    private void importImage() {
         if (Container.ifImport) {
-            try {
-                InputStream is_import = new FileInputStream(Container.filePath);
-                InputStreamReader isr_import = new InputStreamReader(is_import, "UTF-8");
-                BufferedReader br_import = new BufferedReader(isr_import);
-                String str_import = "";
-                while ((str_import = br_import.readLine()) != null) {
-                    strb_import.append(str_import);
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
+            Log.d(TAG, "importImage: Import image: " + Container.filePath);
+            final int[][] data = readJsonImage(new File(Container.filePath));
+            if (data == null) {
+                Log.e(TAG, "importImage: Failed to read pain drawing.");
+                return; // TODO: 19.11.22 there is no recovery mechanism so it may crash later at not so predictable positions.
             }
-
-            try {
-                JSONArray jsonArray = new JSONArray(strb_import.toString());
-                int num_image = jsonArray.length() / 2;
-                x_array_import = new Integer[num_image];
-                y_array_import = new Integer[num_image];
-                for (int i = 0; i < num_image; i++) {
-                    x_array_import[i] = jsonArray.getInt(i);
-                    y_array_import[i] = jsonArray.getInt(num_image + i);
-                }
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
+            // TODO: 19.11.22 assert array length
+            final int[] xValues = data[0];
+            final int[] yValues = data[1];
             cBitmap = Bitmap.createBitmap(Math.round(827 * proportion), Math.round(1169 * proportion), Bitmap.Config.ARGB_8888);
-
-            for (int i = 0; i < x_array_import.length; i++) {
-                cBitmap.setPixel(x_array_import[i], 1169 - y_array_import[i], Container.typeColor);
+            for (int i = 0; i < xValues.length; i++) {
+                cBitmap.setPixel(xValues[i], 1169 - yValues[i], Container.typeColor);
             }
         }
-
     }
 
     private static Bitmap zoom(Bitmap bitmap, float proportion) {
@@ -1051,28 +1031,28 @@ public class DrawView extends View {
         this.pressed = pressed;
     }
 
-    public void negativ_reserve(Bitmap bitmap){
-        int width = bitmap.getWidth();
-        int height = bitmap.getHeight();
-        int pixels = width*height;
+    private void negativeReserve() {
+        int width = negativeBitmap.getWidth();
+        int height = negativeBitmap.getHeight();
+        int pixels = width * height;
 
         int[] pixel = new int[pixels];
-        bitmap.getPixels(pixel,0,width,0,0,width,height);
+        negativeBitmap.getPixels(pixel, 0, width, 0, 0, width, height);
         for (int i = 0; i < pixels; i++) {
-            if (pixel[i] == Color.RED)
-                pixel[i] = Color.WHITE;
-            else
-                pixel[i] = Color.TRANSPARENT;
+            pixel[i] = pixel[i] != Color.RED ? Color.WHITE : Color.TRANSPARENT;
         }
-        bitmap.setPixels(pixel, 0, width, 0, 0, width, height);
-        nBitmap_reserve = Bitmap.createBitmap(bitmap,0,0,828,1169);
-        //nBitmap_reserve = Bitmap.createBitmap(bitmap,0,0,1200,1800);
+        negativeBitmap.setPixels(pixel, 0, width, 0, 0, width, height);
+        //nBitmap_reserve = Bitmap.createBitmap(nBitmap,0,0,1200,1800);
     }
 
     //called when user draw
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        Log.e(">>BETA 01","mode is "+getMode());
+        if (templatePD == null) {
+            Log.e(TAG, "onDraw: template pain drawing not specified. Missing call of setTemplate(..:)");
+            return;
+        }
+        Log.e(">>BETA 01", "mode is " + getMode());
         canvas.drawBitmap(zoom(hBitmap, proportion), 0, 0, hBitmapPaint);
 
         clear(mCanvas);
@@ -1112,9 +1092,10 @@ public class DrawView extends View {
 
         }
         canvas.drawBitmap(zoom(mBitmap, zoom), 0, 0, mBitmapPaint);
-        canvas.drawBitmap(zoom(nBitmap_reserve, proportion), 0, 0, null);
+        // overwrite all pixels outside the allowed area
+        canvas.drawBitmap(zoom(negativeBitmap, proportion), 0, 0, null);
 
-        Log.e(">>BETA 02","mode is "+getMode());
+        Log.e(">>BETA 02", "mode is " + getMode());
         switch (Mode) {
             case PEN:
                 canvas.drawPath(mPath, mPaint);
