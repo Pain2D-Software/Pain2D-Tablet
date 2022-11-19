@@ -685,7 +685,6 @@ public class Container {
 
     public static ArrayList<String> colorList = new ArrayList<String>();
     public static ArrayList<String> typeList= new ArrayList<String>();
-    public static boolean ifImport = false;
     public static int typeColor;
     public static String typeName;
     public static float proportion;

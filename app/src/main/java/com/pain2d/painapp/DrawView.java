@@ -707,6 +707,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 
 //Drawing class to integrate functions in the drawing process
@@ -715,6 +716,7 @@ public class DrawView extends View {
     private static final String TAG = DrawView.class.getSimpleName();
     private float mX, mY;
     private TemplatePD templatePD;
+    private String typeName;
 
     public Map<String, Bitmap> getSbMap() {
         return sbMap;
@@ -990,9 +992,12 @@ public class DrawView extends View {
     /**
      * Import an existing drawing from a specific file.
      * @param file the source of the drawing.
+     * @param typeName name of the pain type.
      * @return {@code true} iff the image was loaded.
      */
-    public boolean importImage(File file) {
+    public boolean importImage(@NonNull File file, @NonNull String typeName) {
+        Objects.requireNonNull(file, "file must not be null.");
+        this.typeName = Objects.requireNonNull(typeName, "typeName must not be null.");
         Log.d(TAG, "importImage: Import image: " + file);
         final int[][] data = readJsonImage(file);
         if (data == null) {
@@ -1043,6 +1048,10 @@ public class DrawView extends View {
         this.pressed = pressed;
     }
 
+    public boolean hasImageLoaded() {
+        return cBitmap != null;
+    }
+
     private void negativeReserve() {
         int width = negativeBitmap.getWidth();
         int height = negativeBitmap.getHeight();
@@ -1068,7 +1077,7 @@ public class DrawView extends View {
 
         clear(mCanvas);
 
-        if (Container.ifImport) {
+        if (hasImageLoaded()) {
             mCanvas.drawBitmap(zoom(cBitmap, proportion), 0, 0, cBitmapPaint);
             //canvas.drawBitmap(mBitmap,0,0,mBitmapPaint);
             invalidate();
@@ -1140,28 +1149,23 @@ public class DrawView extends View {
                     Bitmap emptyBitmap = Bitmap.createBitmap(saveBitmap.getWidth(), saveBitmap.getHeight(), Bitmap.Config.ARGB_8888);
 
                     if (string.equals("eraser")) {
-                        if (num == 1) {
-                            if (Container.ifImport) {
-//                                saveBitmap = mergeBitmap(saveBitmap,zoom(cBitmap,proportion),mPaint);
-                                saveCanvas.drawBitmap(zoom(cBitmap, proportion), 0, 0, mPaint);
-                                for (Path path : pathList.keySet()) {
-                                    if (pathList.get(path).equals(mEraserPaint.getColor())) {
-                                        saveCanvas.drawPath(path, mEraserPaint);
-                                    }
+                        if (num == 1 && hasImageLoaded()) {
+                            saveCanvas.drawBitmap(zoom(cBitmap, proportion), 0, 0, mPaint);
+                            for (Path path : pathList.keySet()) {
+                                if (pathList.get(path).equals(mEraserPaint.getColor())) {
+                                    saveCanvas.drawPath(path, mEraserPaint);
                                 }
-                                if (emptyBitmap.sameAs(saveBitmap)) {
-                                    return false;
-                                } else {
-                                    sbMap.put(Container.typeName, saveBitmap.copy(Bitmap.Config.ARGB_8888, true));
-                                    clear(saveCanvas);
-                                }
-
                             }
-
+                            if (emptyBitmap.sameAs(saveBitmap)) {
+                                return false;
+                            } else {
+                                sbMap.put(Container.typeName, saveBitmap.copy(Bitmap.Config.ARGB_8888, true));
+                                clear(saveCanvas);
+                            }
                         }
                     } else {
                         mPaint.setColor(map.get(string));
-                        if (string.equals(Container.typeName)) {
+                        if (string.equals(typeName)) { // since string is not null, this implies that hasImageLoaded() returns true, so cBitmap is available
                             saveCanvas.drawBitmap(zoom(cBitmap, proportion), 0, 0, mPaint);
                             //saveBitmap = mergeBitmap(saveBitmap, cBitmap, mPaint).copy(Bitmap.Config.ARGB_8888, true);
                         }

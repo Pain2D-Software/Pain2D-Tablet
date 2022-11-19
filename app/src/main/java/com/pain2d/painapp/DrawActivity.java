@@ -716,25 +716,29 @@ import java.util.Map;
 public class DrawActivity extends AppCompatActivity {
     private static final String TAG = DrawActivity.class.getSimpleName();
     /**
-     * (optional) Mapping containing all pain types that are available for selection and the corresponding color.
+     * (conditionally optional) Mapping containing all pain types that are available for selection
+     * and the corresponding color.
      */
     public static final String ARGUMENT_PAIN_TO_COLOR_MAP = "map";
     /**
      * (required) A {@link TemplatePD} that defines which template should be used.
      */
     public static final String ARGUMENT_TEMPLATE_PD = "template_pain_drawing";
-    @Deprecated
-    public static final String ARGUMENT_FILE_NUMBER = "FILE_NUM";
     /**
-     * (optional) If specified, it is a {@link java.io.File} referring to an old drawing that should be edited.
+     * (conditionally optional) If specified, it is a {@link java.io.File} referring to an old
+     * drawing that should be edited. Then {@link #ARGUMENT_PAIN_TO_COLOR_MAP} must not be set but
+     * {@link #ARGUMENT_COLOR}.
      */
     public static final String ARGUMENT_IMAGE_FILE = "image_file";
+    /**
+     * (optional) Specifies the color of the pain if one is edited.
+     */
+    public static final String ARGUMENT_COLOR = "color";
     private float proportion = Container.proportion;
     private int Pen = 1;
     private int Eraser = 2;
     Context context = this;
     private Path lastPath;
-    private Map<String, Integer> map = new HashMap<String, Integer>();
 
     private ScaleGestureDetector mScaleGestureDetector = null;
 
@@ -834,24 +838,27 @@ public class DrawActivity extends AppCompatActivity {
 
         // Handle argument ARGUMENT_TEMPLATE_PD
         final TemplatePD templatePD;
+        final Intent intent = getIntent();
+        if (!intent.hasExtra(ARGUMENT_TEMPLATE_PD)) {
+            throw new IllegalArgumentException("init: Missing argument " + ARGUMENT_TEMPLATE_PD);
+        }
         {
-            final Parcelable parcelable = getIntent().getParcelableExtra(ARGUMENT_TEMPLATE_PD);
+            final Parcelable parcelable = intent.getParcelableExtra(ARGUMENT_TEMPLATE_PD);
             if (parcelable instanceof TemplatePD) {
                 templatePD = (TemplatePD) parcelable;
-            } else if (parcelable != null) {
-                throw new IllegalArgumentException("init: Unexpected argument type for argument "
-                        + ARGUMENT_TEMPLATE_PD + ". Expected " + TemplatePD.class.getName() + " got "
-                        + parcelable.getClass().getName());
             } else {
-                throw new NullPointerException("init: Missing argument "
-                        + ARGUMENT_TEMPLATE_PD + " of type " + TemplatePD.class.getName() + ".");
+                throw new IllegalArgumentException("init: Unexpected argument type for argument "
+                        + ARGUMENT_TEMPLATE_PD + ". Expected instance of " + TemplatePD.class.getName() + " got "
+                        + parcelable);
             }
         }
         view.setTemplate(templatePD);
 
+        final Map<String, Integer> typeNameToColor;
+
         // Handle argument ARGUMENT_IMAGE_FILE
-        {
-            final Serializable serializable = getIntent().getSerializableExtra(ARGUMENT_IMAGE_FILE);
+        if (intent.hasExtra(ARGUMENT_IMAGE_FILE)) {
+            final Serializable serializable = intent.getSerializableExtra(ARGUMENT_IMAGE_FILE);
             if (serializable instanceof File) {
                 final File file = (File) serializable;
                 // TODO: 19.11.22 create a repository for saving drawings that manages the file name and therefore knows how to extract the patient id
@@ -864,25 +871,42 @@ public class DrawActivity extends AppCompatActivity {
                         patientId = name.substring(firstIndex, secondIndex);
                     }
                 }
-                view.importImage(file);
-            } else if (serializable != null) {
-                throw new IllegalArgumentException("init: Unexpected argument type for argument "
-                        + ARGUMENT_IMAGE_FILE + ". Expected " + File.class.getName() + " got "
-                        + serializable.getClass().getName());
+                // TODO: 19.11.22 this also belongs into the repository
+                final String typeName = name.substring(name.lastIndexOf("_") + 1, name.length() - 5);
+                // If we edit a drawing, map argument is not allowed
+                if (intent.hasExtra(ARGUMENT_PAIN_TO_COLOR_MAP)) {
+                    throw new IllegalArgumentException("init: Argument " + ARGUMENT_IMAGE_FILE
+                            + " is mutually exclusive to " + ARGUMENT_PAIN_TO_COLOR_MAP);
+                }
+                typeNameToColor = new HashMap<>(2, 0.75f);
+                typeNameToColor.put(typeName, Container.typeColor);
+                view.setMap(typeNameToColor);
+                view.importImage(file, typeName);
             } else {
-                Container.typeName = null; // This must be cleared when not editing so save mechanism in DrawView works. Remove the els case when removing Container
+                throw new IllegalArgumentException("init: Unexpected argument type for argument "
+                        + ARGUMENT_IMAGE_FILE + ". Expected instance of " + File.class.getName() + " got "
+                        + serializable);
+            }
+        } else {
+            Container.typeName = null; // This must be cleared when not editing so save mechanism in DrawView works. Remove the els case when removing Container
+            if (intent.hasExtra(ARGUMENT_PAIN_TO_COLOR_MAP)) {
+                final Serializable serializable = intent.getSerializableExtra(ARGUMENT_PAIN_TO_COLOR_MAP);
+                if (serializable instanceof Map) {
+                    //noinspection unchecked
+                    typeNameToColor = (Map<String, Integer>) serializable;
+                    view.setMap(typeNameToColor);
+                } else {
+                    throw new IllegalArgumentException("init: Unexpected argument type for argument "
+                            + ARGUMENT_PAIN_TO_COLOR_MAP + ". Expected instance of "
+                            + Map.class.getName() + " got " + serializable);
+                }
+            } else {
+                // Default to no editing
+                typeNameToColor = null;
+                // TODO: 19.11.22 hide initial image that shows how to draw.
             }
         }
 
-        if (Container.ifDisplay) {
-            map = null;
-        } else if (Container.ifRedraw) {
-            map.put(Container.typeName, Container.typeColor);
-            view.setMap(map);
-        } else {
-            map = (Map<String, Integer>) this.getIntent().getSerializableExtra(ARGUMENT_PAIN_TO_COLOR_MAP);
-            view.setMap(map);
-        }
         view.invalidate();
         layout.addView(view, params);
 
@@ -891,16 +915,16 @@ public class DrawActivity extends AppCompatActivity {
 
 //        ImageButton button_legend = (ImageButton)findViewById(R.id.button_legend);
 
-        if (map != null) {
+        if (typeNameToColor != null) {
 
-            ArrayList<Button> buttonList = new ArrayList<Button>();
-            final int num = map.size();
+            ArrayList<Button> buttonList = new ArrayList<>();
+            final int num = typeNameToColor.size();
             double time = Math.ceil((double) num / 3.0);
             for (int i = 0; i < time; i++) {
                 addItem(buttonList);
             }
             int k = 0;
-            for (final Map.Entry<String, Integer> map1 : map.entrySet()) {
+            for (final Map.Entry<String, Integer> map1 : typeNameToColor.entrySet()) {
                 if (k == 0) {
                     view.setPaintColor(map1.getValue());
                 }
@@ -1047,7 +1071,6 @@ public class DrawActivity extends AppCompatActivity {
                 button_back.startAnimation(animation);
                 Intent intent = new Intent(DrawActivity.this, MainActivity.class);
                 startActivity(intent);
-                Container.ifImport = false;
                 Container.ifDisplay = false;
                 Container.ifRedraw = false;
             }
