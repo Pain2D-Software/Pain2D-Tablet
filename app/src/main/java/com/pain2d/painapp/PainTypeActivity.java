@@ -691,6 +691,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.webkit.MimeTypeMap;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -853,7 +854,7 @@ public class PainTypeActivity extends AppCompatActivity {
             public void onClick(View v) {
                 button_next.startAnimation(animation);
                 Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("*/*");
+                intent.setType(MimeTypeMap.getSingleton().getMimeTypeFromExtension("zip"));
                 startActivityForResult(intent, PICKFILE_REQUEST_CODE);
 
             }
