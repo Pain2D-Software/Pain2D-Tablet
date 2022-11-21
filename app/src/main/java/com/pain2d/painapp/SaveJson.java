@@ -701,7 +701,7 @@ public class SaveJson {
         //no instance
     }
 
-    public static boolean exportJson(Context applocationContext, Map<String, Bitmap> map, TemplatePD templatePD, float proportion, String filePath, String fileNum) {
+    public static boolean exportJson(Context applocationContext, Map<String, Bitmap> map, TemplatePD templatePD, float proportion, String filePath, String patientId) {
         List<Integer> array_X = new ArrayList<>();
         List<Integer> array_Y = new ArrayList<>();
 
@@ -711,7 +711,8 @@ public class SaveJson {
         List<File> files = new ArrayList<>(map.size());
 
         for (Map.Entry<String, Bitmap> e : map.entrySet()) {
-            String fileName = "Patient" + "_" + fileNum + "_" + e.getKey();
+            final String painTypeName = e.getKey();
+            String fileName = "Patient_" + painTypeName + "_" + patientId;
             final Bitmap bitmap = e.getValue();
             for (int i = 0; i < Math.round(827 * proportion); i++) {
                 for (int j = 0; j < Math.round(1169 * proportion); j++) {

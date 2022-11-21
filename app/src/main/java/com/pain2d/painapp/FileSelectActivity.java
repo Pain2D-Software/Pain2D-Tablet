@@ -699,6 +699,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class FileSelectActivity extends AppCompatActivity {
 
@@ -737,7 +738,16 @@ public class FileSelectActivity extends AppCompatActivity {
                     String suffix = filePath.substring(filePath.length()-4);
                     if(suffix.equals("json")){
 
-                        final String typeName = filePath.substring(filePath.lastIndexOf("_")+1,filePath.length()-5);
+                        String typeName = null;
+                        final int firstIndex = filePath.indexOf('_') + 1;
+                        if (firstIndex > 0) {
+                            final int secondIndex = filePath.indexOf('_', firstIndex);
+                            if (secondIndex >= 0) {
+                                typeName = filePath.substring(firstIndex, secondIndex);
+                            }
+                        }
+                        Objects.requireNonNull(typeName, "typeName not found in file name " + filePath);
+
                         Container.typeColor = Color.parseColor(Container.colorList.get(Container.typeList.indexOf(typeName)));
 
                         Container.isFromFilesList = true;

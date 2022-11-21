@@ -712,6 +712,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class DrawActivity extends AppCompatActivity {
     private static final String TAG = DrawActivity.class.getSimpleName();
@@ -864,15 +865,17 @@ public class DrawActivity extends AppCompatActivity {
                 // TODO: 19.11.22 create a repository for saving drawings that manages the file name and therefore knows how to extract the patient id
                 // Currently it is between the first and second underscore
                 final String name = file.getName();
+                String typeName = null;
                 final int firstIndex = name.indexOf('_') + 1;
                 if (firstIndex > 0) {
                     final int secondIndex = name.indexOf('_', firstIndex);
                     if (secondIndex >= 0) {
-                        patientId = name.substring(firstIndex, secondIndex);
+                        typeName = name.substring(firstIndex, secondIndex);
                     }
                 }
+                Objects.requireNonNull(typeName, "typeName not found in file name " + name);
                 // TODO: 19.11.22 this also belongs into the repository
-                final String typeName = name.substring(name.lastIndexOf("_") + 1, name.length() - 5);
+                patientId = name.substring(name.lastIndexOf("_") + 1, name.length() - 5);
                 // If we edit a drawing, map argument is not allowed
                 if (intent.hasExtra(ARGUMENT_PAIN_TO_COLOR_MAP)) {
                     throw new IllegalArgumentException("init: Argument " + ARGUMENT_IMAGE_FILE

@@ -681,7 +681,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -823,9 +822,7 @@ public class MainActivity extends Activity {
         rwList.writeList(this, RWList.LIST_PAIN_TYPES, newPainTypesList);
         rwList.writeList(this, RWList.LIST_COLOR, newColorsList);
         // Now apply renaming to already saved pain drawings
-        if (!renamings.isEmpty()) {
-            renameFilesInDirectoryRecursivelyPatchToVersion4(renamings, new File(getExternalFilesDir("").getAbsolutePath()));
-        }
+        renameFilesInDirectoryRecursivelyPatchToVersion4(renamings, new File(getExternalFilesDir("").getAbsolutePath()));
     }
 
     private static void renameFilesInDirectoryRecursivelyPatchToVersion4(Map<String, String> renamings, File root) {
@@ -837,26 +834,30 @@ public class MainActivity extends Activity {
                     renameFilesInDirectoryRecursivelyPatchToVersion4(renamings, file);
                 } else {
                     // logic matches com.pain2d.painapp.FileSelectActivity#733@1ed0e4c597c7a8529b5285f9bb827b201fae17b3
-                    String path = file.getPath();
-                    int painTypeBegin = path.lastIndexOf("_") + 1;
+                    final File parentFile = file.getParentFile();
+                    String path = file.getName();
+                    int patientIdBegin = path.indexOf("_") + 1;
+                    int patientIdEnd = path.lastIndexOf("_");
+                    int painTypeBegin = patientIdEnd + 1;
                     int painTypeEnd = path.length() - 5;
+                    String patientId = path.substring(patientIdBegin, patientIdEnd);
                     String painType = path.substring(painTypeBegin, painTypeEnd);
                     String newName = renamings.get(painType);
-                    if (newName != null) {
-                        File newFile = new File(path.substring(0, painTypeBegin) + newName
-                                + path.substring(painTypeEnd));
-                        Log.i(TAG, "patchToVersion4: Rename file " + file + " to " + newFile);
-                        for (int remainingTries = 2; remainingTries >= 0; remainingTries--) {
-                            if (file.renameTo(newFile)) {
-                                break;
-                            } else if (remainingTries == 0) {
-                                Log.e(TAG, "patchingToVersion4: Finally failed to rename file " + file + " to " + newFile);
-                            } else {
-                                Log.e(TAG, "patchingToVersion4: Failed to rename file " + file + " to " + newFile + " stop trying");
-                                try {
-                                    Thread.sleep(100);
-                                } catch (InterruptedException ignored) {
-                                }
+                    if (newName == null) {
+                        newName = painType; // name stays the same ut we still need to rename for swapping patient id with pain type name.
+                    }
+                    File newFile = new File(parentFile, "Patient_" + newName + "_" + patientId + ".json");
+                    Log.i(TAG, "patchToVersion4: Rename file " + file + " to " + newFile);
+                    for (int remainingTries = 2; remainingTries >= 0; remainingTries--) {
+                        if (file.renameTo(newFile)) {
+                            break;
+                        } else if (remainingTries == 0) {
+                            Log.e(TAG, "patchingToVersion4: Finally failed to rename file " + file + " to " + newFile);
+                        } else {
+                            Log.e(TAG, "patchingToVersion4: Failed to rename file " + file + " to " + newFile + " stop trying");
+                            try {
+                                Thread.sleep(100);
+                            } catch (InterruptedException ignored) {
                             }
                         }
                     }
