@@ -695,20 +695,20 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <activity android:name=".MainActivity">
+        <activity android:exported="true" android:name=".MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".PainTypeActivity"/>
+        <activity android:exported="false" android:name=".PainTypeActivity"/>
 
-        <activity android:name=".DrawActivity" />
+        <activity android:exported="false" android:name=".DrawActivity" />
 
-        <activity android:name=".FileSelectActivity" />
+        <activity android:exported="false" android:name=".FileSelectActivity" />
 
-        <activity android:name=".TestActivity"/>
+        <activity android:exported="false" android:name=".TestActivity"/>
 
     </application>
 
