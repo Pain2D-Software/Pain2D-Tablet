@@ -704,6 +704,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -713,6 +714,8 @@ import java.util.Objects;
 //Drawing class to integrate functions in the drawing process
 
 public class DrawView extends View {
+    static final int MASH_EXCLUDE_COLOR = Color.WHITE;
+    static final int MASH_INCLUDE_COLOR = Color.TRANSPARENT;
     private static final String TAG = DrawView.class.getSimpleName();
     private float mX, mY;
     private TemplatePD templatePD;
@@ -732,7 +735,6 @@ public class DrawView extends View {
     private Bitmap hBitmap;
     private Bitmap cBitmap;
     private Bitmap negativeBitmap; // Bitmap for negative
-    private Bitmap nBitmap_reserve;
     private Canvas mCanvas;
     private final Path mPath;
     // TODO: 19.11.22 is this ever used?
@@ -1060,7 +1062,7 @@ public class DrawView extends View {
         int[] pixel = new int[pixels];
         negativeBitmap.getPixels(pixel, 0, width, 0, 0, width, height);
         for (int i = 0; i < pixels; i++) {
-            pixel[i] = pixel[i] != Color.RED ? Color.WHITE : Color.TRANSPARENT;
+            pixel[i] = pixel[i] != Color.RED ? MASH_EXCLUDE_COLOR : MASH_INCLUDE_COLOR;
         }
         negativeBitmap.setPixels(pixel, 0, width, 0, 0, width, height);
     }
@@ -1159,6 +1161,7 @@ public class DrawView extends View {
                             if (emptyBitmap.sameAs(saveBitmap)) {
                                 return false;
                             } else {
+                                applyMask(saveBitmap, zoom(negativeBitmap, proportion));
                                 sbMap.put(typeName, saveBitmap.copy(Bitmap.Config.ARGB_8888, true));
                                 clear(saveCanvas);
                             }
@@ -1181,6 +1184,7 @@ public class DrawView extends View {
                         if (emptyBitmap.sameAs(saveBitmap)) {
                             return false;
                         } else {
+                            applyMask(saveBitmap, zoom(negativeBitmap, proportion));
                             sbMap.put(string, saveBitmap.copy(Bitmap.Config.ARGB_8888, true));
                             clear(saveCanvas);
                         }
@@ -1198,7 +1202,35 @@ public class DrawView extends View {
         }
     }
 
-    public static Bitmap mergeBitmap(Bitmap background, Bitmap foreground, Paint paint) {
+    static void applyMask(@NonNull Bitmap data, @NonNull Bitmap mask) {
+        final int dataHeight = data.getHeight();
+        final int dataWidth = data.getWidth();
+        final int[] dataPixels = new int[dataWidth * dataHeight];
+        data.getPixels(dataPixels, 0, dataWidth, 0, 0, dataWidth, dataHeight);
+
+        final int maskWidth = mask.getWidth();
+        final int maskHeight = mask.getHeight();
+        final int[] maskPixels = new int[maskWidth * maskHeight];
+        mask.getPixels(maskPixels, 0, maskWidth, 0, 0, maskWidth, maskHeight);
+
+        final int minHeight = Math.min(dataHeight, maskHeight);
+        final int minWidth = Math.min(dataWidth, maskWidth);
+        for (int yd = 0; yd < minHeight; yd++) {
+            for (int xd = 0; xd < minWidth; xd++) {
+                if (maskPixels[yd * maskWidth + xd] == MASH_EXCLUDE_COLOR) {
+                    dataPixels[yd * dataWidth + xd] = Color.TRANSPARENT;
+                }
+            }
+            // clear right part of data that is not under mask
+            Arrays.fill(dataPixels, yd * dataWidth + minWidth, (yd + 1) * dataWidth, Color.TRANSPARENT);
+        }
+        // clear lower part of data that is not under mask
+        Arrays.fill(dataPixels, minHeight * dataWidth, dataPixels.length, Color.TRANSPARENT);
+
+        data.setPixels(dataPixels, 0, dataWidth, 0, 0, dataWidth, dataHeight);
+    }
+
+    public Bitmap mergeBitmap(Bitmap background, Bitmap foreground, Paint paint) {
         if (background == null) {
             return null;
         }
