@@ -820,7 +820,12 @@ public class TemplatePDRepository {
             ZipEntry ze;
             while ((ze = in.getNextEntry()) != null) {
                 String filename = ze.getName();
-                final File file = new File(templatePD.getLocation(), filename);
+                final File targetDir = templatePD.getLocation();
+                final String canonicalTargetDir = targetDir.getCanonicalPath();
+                final File file = new File(targetDir, filename);
+                if (!file.getCanonicalPath().startsWith(canonicalTargetDir)) {
+                    throw new IOException("Extracted files must be contained inside the target directory " + targetDir + " but target file was " + file);
+                }
                 try (OutputStream fOut = new FileOutputStream(file)) {
                     copy(in, fOut);
                     Log.i(TAG, "importZip: copied to " + filename);
