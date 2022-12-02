@@ -16,3 +16,5 @@ You should have received a copy of the GNU General Public License along with all
 ## Website 
 Pain2D.com
 
+***"To make research into pain diseases faster, easier and free of charge for all scientists around the world."***
+                             *Natasza Szczypien, Frank Klawonn and the Pain2D Team*
