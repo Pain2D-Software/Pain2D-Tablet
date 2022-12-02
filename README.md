@@ -4,6 +4,10 @@ Pain2D-Tablet enables a fast and simple data collection (pain areas on pan drawi
 #### Pain2D are free software under the GPL v.3 licence. Pain2D was developed for researchers to allow faster, easier and free of charge pain drawing analysis. Pain2D is not a diagnostic tool.
 #### Thanks to our free friendship cooperations with many researchers from medical, social science and computer science fields we can test and improve our software. 
 
+***"To make research into pain diseases faster, easier and free of charge for all scientists around the world."***
+                             *Natasza Szczypien, Frank Klawonn and the Pain2D Team*
+
+
 ## Download for Adroid from App Store
 https://play.google.com/store/apps/details?id=com.pain2d.painapp&gl=us
 
@@ -15,6 +19,3 @@ You should have received a copy of the GNU General Public License along with all
 
 ## Website 
 Pain2D.com
-
-***"To make research into pain diseases faster, easier and free of charge for all scientists around the world."***
-                             *Natasza Szczypien, Frank Klawonn and the Pain2D Team*
