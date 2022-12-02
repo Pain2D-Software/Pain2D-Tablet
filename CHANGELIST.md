@@ -1,3 +1,7 @@
+# 1.0.5 (5)
+
+- fix zip file extraction to only extract into the target directory (Jonas Eckert)
+
 # 1.0.4 (4)
 
 - Translate pain types to english and add five more (Jonas Eckert + developer from Pain2D-Tablet version 2 for names):
