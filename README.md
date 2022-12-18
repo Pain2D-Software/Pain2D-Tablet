@@ -1,3 +1,6 @@
+![Logo](https://github.com/Pain2D-Software/Pain2D-Tablet/blob/main/app/src/main/ic_logopain2d-playstore.png)
+
+
 # Pain2D-Tablet
 Pain2D-Tablet enables a fast and simple data collection (pain areas on pan drawings) for research pourposes.
 
